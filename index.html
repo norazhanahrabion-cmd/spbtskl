@@ -140,6 +140,12 @@ h2.yr span{margin-left:auto;font:500 13px var(--fb);color:var(--mut)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .cn{background:#4a1f1b;color:#ffb4a8}}
 :root[data-theme="dark"] .cn{background:#4a1f1b;color:#ffb4a8}
 .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.ov{position:fixed;inset:0;background:rgba(10,25,30,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.dlg{background:var(--card);border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.dlg b{font:700 18px var(--fd)}.dlg p{color:var(--mut);font-size:14px;margin:6px 0 12px}
+.dlg input{width:100%;padding:12px;font:600 18px var(--fb);letter-spacing:.12em;text-transform:uppercase;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.dlg .err{color:var(--warn);font-size:13px;min-height:18px;margin:6px 0}
+.dlg .toolbar{justify-content:flex-end;margin:12px 0 0}
 .toolbar .sp{flex:1}.cnt{font-size:14px;color:var(--mut)}.cnt b{color:var(--ink);font-variant-numeric:tabular-nums}
 .gbox{display:flex;align-items:center;gap:10px;margin:0 0 12px;background:var(--card);border-radius:14px;box-shadow:var(--sh);padding:6px 14px}
 .gbox label{font-size:13px;font-weight:600;color:var(--mut);white-space:nowrap}
@@ -286,11 +292,6 @@ th,td{border:1px solid #444;padding:3px 4px;text-align:center}td.l,th.l{text-ali
 th.v{height:120px;vertical-align:bottom;padding:2px}th.v div{writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;margin:0 auto}
 .bad{font-weight:700}.no-print{margin:10px 0}@media print{.no-print{display:none}}
 
-.ov{position:fixed;inset:0;background:rgba(10,25,30,.55);display:grid;place-items:center;z-index:50;padding:16px}
-.dlg{background:var(--card);border-radius:16px;padding:20px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-.dlg b{font:700 18px var(--fd)}.dlg p{color:var(--mut);font-size:14px;margin:6px 0 12px}
-.dlg input{width:100%;padding:12px;font:600 18px var(--fb);letter-spacing:.12em;text-transform:uppercase;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
-.dlg .err{color:var(--warn);font-size:13px;min-height:18px;margin:6px 0}
 </style>
 </head><body><div class="no-print"><button onclick="window.print()">Cetak</button></div>${body}<script>window.addEventListener('load',function(){setTimeout(function(){try{window.print()}catch(e){}},300)})<\/script></body></html>`;
 }
@@ -373,7 +374,7 @@ function takCount(c){ if(loaded[c.id]){ let n=0; Object.values(tak[c.id]||{}).fo
 function ago(t){ const m=Math.max(0,Math.round((Date.now()-t)/60000)); if(m<1) return 'baru sebentar tadi'; if(m<60) return m+' minit lalu'; const h=Math.round(m/60); if(h<24) return h+' jam lalu'; return Math.round(h/24)+' hari lalu'; }
 function confirmDlg(title,html,okLabel,onOk){
   const o=document.createElement('div'); o.className='ov'; o.setAttribute('role','alertdialog');
-  o.innerHTML=`<div class="dlg"><b>${title}</b><p style="color:var(--ink)">${html}</p><div class="toolbar"><button class="btn pri" id="cfOk">${okLabel}</button><button class="btn" id="cfNo">Batal</button></div></div>`;
+  o.innerHTML=`<div class="dlg"><b>${title}</b><p style="color:var(--ink)">${html}</p><div class="toolbar"><button class="btn" id="cfNo">Batal</button><button class="btn pri" id="cfOk">${okLabel}</button></div></div>`;
   document.body.appendChild(o); o.querySelector('#cfNo').focus();
   const close=()=>{ o.remove(); document.removeEventListener('keydown',kd); }, kd=e=>{ if(e.key==='Escape') close(); };
   document.addEventListener('keydown',kd);
@@ -682,7 +683,7 @@ function byStudent(c){
     const no=k+1, r=getRec(c.id,no), open=view.open===no;
     h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.length}/${c.books.length}</span></div>`;
     if(open){
-      h+='<div class="bd"><div class="toolbar" style="margin-top:10px"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button><span class="sp"></span>'+(view.del===no?'<span class="cnt">Buang murid ini?</span><button class="btn dng" data-dy="'+no+'">Ya, buang</button><button class="btn" data-dn="1">Batal</button>':'<button class="btn dng" data-dx="'+no+'">Buang murid</button>')+'</div>';
+      h+='<div class="bd"><div class="toolbar" style="margin-top:10px">'+(view.del===no?'<span class="sp"></span><span class="cnt">Buang murid ini?</span><button class="btn" data-dn="1">Batal</button><button class="btn dng" data-dy="'+no+'">Ya, buang</button>':'<button class="btn dng" data-dx="'+no+'">Buang murid</button><span style="display:flex;gap:8px;margin-left:auto"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button></span>')+'</div>';
       c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
       h+='</div>';
     }
