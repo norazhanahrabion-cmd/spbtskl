@@ -554,12 +554,13 @@ async function initDb(){
 /* ---------- paparan ---------- */
 function tileName(c){ const nm=c.cls.charAt(0)+c.cls.slice(1).toLowerCase(); const m=loaded[c.id]?(c.label!==(c.base&&c.base.label)?c.label:''):((summ[c.id]&&summ[c.id].m)||''); return m||(c.year+' '+nm); }
 function cntOf(c){ if(loaded[c.id]) return c.students.length; const s=summ[c.id]||{}; return Math.max(0,c.students.length+(s.tm||0)-(s.bg||0)); }
+function effBooks(c){ const r=[]; c.books.forEach((b,bi)=>{ let any=!c.students.length; for(let i=1;i<=c.students.length&&!any;i++) if(okFor(c,i,bi)) any=true; if(any) r.push(bi); }); return r; }
 function stats(c){
-  const B=c.books.length;
-  if(!loaded[c.id]){ const s=summ[c.id]||{}, K=cntOf(c); let bk=0, cm=0; if(K) for(let bi=0;bi<B;bi++){ const m=Math.min((s.bm||{})[bi]||0,K); cm+=m; if(m>=K) bk++; } const ct=K*B; return {n:Math.min(s.n||0,K),t:s.t||0,bk,B,cm,ct,pc:ct?Math.floor(100*cm/ct):0}; }
+  const EB=effBooks(c), B=EB.length;
+  if(!loaded[c.id]){ const s=summ[c.id]||{}, K=cntOf(c); let bk=0, cm=0; if(K) for(const bi of EB){ const m=Math.min((s.bm||{})[bi]||0,K); cm+=m; if(m>=K) bk++; } const ct=K*B; return {n:Math.min(s.n||0,K),t:s.t||0,bk,B,cm,ct,pc:ct?Math.floor(100*cm/ct):0}; }
   const N=c.students.length; let n=0,t=0,bk=0,cm=0,ct=0;
   for(let i=1;i<=N;i++){ const r=getRec(c.id,i); t+=r.length; if(r.length||takOf(c.id,i).length) n++; }
-  if(N) for(let bi=0;bi<B;bi++){ let ok=true; for(let i=1;i<=N;i++){ if(!okFor(c,i,bi)) continue; ct++; if(getRec(c.id,i).includes(bi)||takHas(c.id,i,bi)) cm++; else ok=false; } if(ok) bk++; }
+  if(N) for(const bi of EB){ let ok=true; for(let i=1;i<=N;i++){ if(!okFor(c,i,bi)) continue; ct++; if(getRec(c.id,i).includes(bi)||takHas(c.id,i,bi)) cm++; else ok=false; } if(ok) bk++; }
   return {n,t,bk,B,cm,ct,pc:ct?Math.floor(100*cm/ct):0};
 }
 function missedList(c){
