@@ -174,7 +174,13 @@ function applyRoster(c){
   c.ids=ids; c.students=names; c.elig=elig; c.cn=cn;
 }
 CLASSES.forEach(applyRoster);
-function toast(t){ const s=$('#save'); s.textContent=t; s.classList.add('show'); clearTimeout(saveMsgT); saveMsgT=setTimeout(()=>s.classList.remove('show'),/Gagal|tiada/i.test(t)?7000:1400); }
+function errTxt(e){
+  try{ if(e&&e.body){ const j=JSON.parse(e.body); return (j.message||j.hint||e.body).toString().slice(0,120)+' ('+e.status+')'; } }catch(x){ if(e&&e.body) return String(e.body).slice(0,120); }
+  const m=(e&&e.message)||String(e);
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'tiada sambungan ke Supabase (projek dijeda / internet / config.js)';
+  return m;
+}
+function toast(t){ const s=$('#save'); s.textContent=t; s.classList.add('show'); clearTimeout(saveMsgT); saveMsgT=setTimeout(()=>s.classList.remove('show'),/Gagal|tiada/i.test(t)?9000:1400); }
 const pending={};
 async function writeRec(key){
   const p=pending[key]; if(!p) return; delete pending[key];
@@ -186,14 +192,14 @@ async function writeRec(key){
 function persist(cid,pos){
   const no=idAt(cid,pos), key=cid+'_'+no; pending[key]={cid,no};
   clearTimeout(saveTimers[key]);
-  saveTimers[key]=setTimeout(async()=>{ try{ await writeRec(key); toast('Disimpan ✓'); }catch(e){ toast('Gagal simpan – cuba lagi'); console.error(e); } },350);
+  saveTimers[key]=setTimeout(async()=>{ try{ await writeRec(key); toast('Disimpan ✓'); }catch(e){ toast('Gagal simpan: '+errTxt(e)); console.error(e); } },350);
 }
 async function saveNow(){
   if(!db){ toast('Sambungan storan tiada – tidak dapat simpan'); return; }
   try{
     for(const k of Object.keys(pending)){ clearTimeout(saveTimers[k]); await writeRec(k); }
     const d=new Date(); toast('Semua disimpan ✓ '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'));
-  }catch(e){ toast('Gagal simpan – cuba lagi'); console.error(e); }
+  }catch(e){ toast('Gagal simpan: '+errTxt(e)); console.error(e); }
 }
 function download(filename,data,type){
   const b=new Blob([data],{type:type||'text/plain;charset=utf-8'}), u=URL.createObjectURL(b), a=document.createElement('a');
@@ -503,7 +509,7 @@ async function saveRoster(c){
   applyRoster(c);
   if(!db){ toast('Disimpan sementara sahaja (storan tiada)'); return; }
   try{ await rpc('simpan',{p_kelas:c.id,p_kunci:'_senarai',p_data:{tambah:s.tambah||[],buang:s.buang||[],buku:s.buku,nama:s.nama}}); toast('Senarai murid disimpan ✓'); }
-  catch(e){ toast('Gagal simpan senarai – cuba lagi'); console.error(e); }
+  catch(e){ toast('Gagal simpan: '+errTxt(e)); console.error(e); }
 }
 function addStudent(c,name,cn){
   name=name.replace(/\s+/g,' ').trim().toUpperCase();
@@ -585,7 +591,7 @@ function matrix(c){
 function saveGuru(c,name){
   guru[c.id]=name;
   if(!db) return;
-  rpc('simpan',{p_kelas:c.id,p_kunci:'_guru',p_data:{guru:name}}).then(()=>toast('Guru kelas disimpan ✓')).catch(()=>toast('Gagal simpan – cuba lagi'));
+  rpc('simpan',{p_kelas:c.id,p_kunci:'_guru',p_data:{guru:name}}).then(()=>toast('Guru kelas disimpan ✓')).catch(e=>toast('Gagal simpan: '+errTxt(e)));
 }
 function bind(c){
   { const cn=$('#cnm'); if(cn) cn.onchange=()=>{ const v=cn.value.replace(/\s+/g,' ').trim().toUpperCase(); if(v.length<2){ render(); return; } const s=roster[c.id]=roster[c.id]||{tambah:[],buang:[]}; s.nama=(v===c.base.label)?undefined:v; saveRoster(c); render(); }; }
