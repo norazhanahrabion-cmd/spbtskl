@@ -6,6 +6,11 @@
 <title>SPBT G 2027 – Rekod Penerimaan Buku Teks</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+(function(){ try{ var m=localStorage.getItem('spbtg_mod')||'auto', p=localStorage.getItem('spbtg_pal')||'laut', d=document.documentElement;
+  d.setAttribute('data-theme', m==='auto' ? (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light') : m);
+  if(p!=='laut') d.setAttribute('data-pal',p); }catch(e){ document.documentElement.setAttribute('data-theme','light'); } })();
+</script>
 <script src="config.js"></script>
 <script>/*!
 
@@ -32,6 +37,27 @@ https://github.com/nodeca/pako/blob/main/LICENSE
   color-scheme:light}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d181b;--card:#15252a;--ink:#e6f0f1;--mut:#8ea5aa;--line:#24383d;--g:#3fc7bf;--g2:#143536;--gi:#062321;--warn:#f0b35c;--warnbg:#33281a;--bad:#ff8a7a;--sh:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.25);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#0d181b;--card:#15252a;--ink:#e6f0f1;--mut:#8ea5aa;--line:#24383d;--g:#3fc7bf;--g2:#143536;--gi:#062321;--warn:#f0b35c;--warnbg:#33281a;--bad:#ff8a7a;--sh:0 1px 2px rgba(0,0,0,.4),0 6px 18px rgba(0,0,0,.25);color-scheme:dark}
+:root[data-pal="hutan"][data-theme="light"]{--bg:#eef4ee;--card:#fff;--ink:#14261a;--mut:#5a7160;--line:#d8e5da;--g:#2f7d3a;--g2:#e0f0e2;--gi:#fff}
+:root[data-pal="hutan"][data-theme="dark"]{--bg:#0f1a12;--card:#172a1c;--ink:#e6f1e8;--mut:#8fa896;--line:#26402c;--g:#62c97a;--g2:#163a1f;--gi:#072410}
+:root[data-pal="senja"][data-theme="light"]{--bg:#f8f1ea;--card:#fff;--ink:#2b1b12;--mut:#7a6355;--line:#ecdcce;--g:#c2561a;--g2:#fbe7d8;--gi:#fff}
+:root[data-pal="senja"][data-theme="dark"]{--bg:#1a1210;--card:#281b16;--ink:#f3e8e0;--mut:#b09a8c;--line:#43302a;--g:#ff9a5a;--g2:#4a2a18;--gi:#2a1100}
+:root[data-pal="lavender"][data-theme="light"]{--bg:#f2f0f9;--card:#fff;--ink:#1e1a33;--mut:#6a6585;--line:#e0dcf0;--g:#5b46c2;--g2:#e8e4fa;--gi:#fff}
+:root[data-pal="lavender"][data-theme="dark"]{--bg:#14111f;--card:#1e1a30;--ink:#ece9fa;--mut:#a29cc0;--line:#332d52;--g:#a995ff;--g2:#2c2650;--gi:#150c3a}
+:root[data-pal="mawar"][data-theme="light"]{--bg:#fbf0f3;--card:#fff;--ink:#2c141c;--mut:#85606c;--line:#f0d9e0;--g:#c2305f;--g2:#fbe0e8;--gi:#fff}
+:root[data-pal="mawar"][data-theme="dark"]{--bg:#1c1015;--card:#2a1820;--ink:#f6e7ec;--mut:#b8909d;--line:#4a2b37;--g:#ff7da3;--g2:#4d1f31;--gi:#36071a}
+:root[data-pal="grafit"][data-theme="light"]{--bg:#f1f1f2;--card:#fff;--ink:#1a1b1e;--mut:#65686f;--line:#dcdde0;--g:#3d4350;--g2:#e6e8ec;--gi:#fff}
+:root[data-pal="grafit"][data-theme="dark"]{--bg:#121315;--card:#1c1d21;--ink:#ececee;--mut:#9a9ca3;--line:#2e3036;--g:#b8c0d4;--g2:#2a2e38;--gi:#14161b}
+
+.tt{margin-left:2px}@media(max-width:520px){.tt{display:none}header .btn{padding:8px 11px}header{gap:8px;padding:10px 12px}header .mark{display:none}header h1{font-size:17px}}
+.tm{position:fixed;z-index:60;top:62px;right:12px;width:min(320px,calc(100vw - 24px));background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:14px}
+.tm h3{margin:0 0 8px;font:700 14px var(--fd)}
+.tm .seg{display:flex;gap:6px;margin-bottom:14px}
+.tm .seg button{flex:1;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:9px 6px;font:600 13.5px var(--fb);cursor:pointer}
+.tm .seg button[aria-pressed=true]{border-color:var(--g);background:var(--g2);color:var(--g)}
+.tm .pals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tm .pal{display:grid;gap:6px;justify-items:center;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:12px;padding:10px 4px;font:600 12.5px var(--fb);cursor:pointer}
+.tm .pal[aria-pressed=true]{border-color:var(--g);background:var(--g2)}
+.tm .sw{width:34px;height:34px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55),0 0 0 1px rgba(0,0,0,.15)}
 body[data-y="1"]{--yc:var(--y1)}body[data-y="2"]{--yc:var(--y2)}body[data-y="3"]{--yc:var(--y3)}body[data-y="4"]{--yc:var(--y4)}body[data-y="5"]{--yc:var(--y5)}body[data-y="6"]{--yc:var(--y6)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -142,6 +168,7 @@ h2{font:700 14px var(--fd);margin:22px 0 8px;color:var(--mut)}
   <button class="btn hide" id="back" aria-label="Kembali ke senarai kelas">‹ Kelas</button>
   <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 4h4v16H5zM10 6h4v14h-4z"/><path d="M15.5 8.5l3.9-1 3 11.6-3.9 1z" transform="translate(-2 0)"/></svg></span>
   <h1 id="title">SPBT G 2027<small>Rekod penerimaan buku teks · SK Langkawi</small></h1>
+  <button class="btn" id="themeBtn" aria-label="Tukar tema dan warna" aria-haspopup="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 3a9 9 0 1 0 0 18c1.2 0 2-.8 2-1.8 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4C21 6.5 17 3 12 3z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7" r="1"/><circle cx="15" cy="7.5" r="1"/></svg><span class="tt"> Tema</span></button>
   <button class="btn" id="sumBtn">Ringkasan</button>
 </header>
 <main id="app"></main>
@@ -200,6 +227,26 @@ async function saveNow(){
     for(const k of Object.keys(pending)){ clearTimeout(saveTimers[k]); await writeRec(k); }
     const d=new Date(); toast('Semua disimpan ✓ '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'));
   }catch(e){ toast('Gagal simpan: '+errTxt(e)); console.error(e); }
+}
+
+/* ---------- tema: mod + palet warna ---------- */
+const PALET=[['laut','Laut','#0b7a75'],['hutan','Hutan','#2f7d3a'],['senja','Senja','#c2561a'],['lavender','Lavender','#5b46c2'],['mawar','Mawar','#c2305f'],['grafit','Grafit','#3d4350']];
+const MODS=[['auto','Auto'],['light','Cerah'],['dark','Gelap']];
+function themeGet(){ return {m:store.get('spbtg_mod')||'auto', p:store.get('spbtg_pal')||'laut'}; }
+function themeApply(){
+  const {m,p}=themeGet(), d=document.documentElement;
+  d.setAttribute('data-theme', m==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):m);
+  if(p==='laut') d.removeAttribute('data-pal'); else d.setAttribute('data-pal',p);
+}
+try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(themeGet().m==='auto') themeApply(); }); }catch(e){}
+function themePanel(){
+  let o=document.getElementById('tm'); if(o){ o.remove(); return; }
+  const {m,p}=themeGet(); o=document.createElement('div'); o.className='tm'; o.id='tm'; o.setAttribute('role','dialog'); o.setAttribute('aria-label','Tema');
+  o.innerHTML='<h3>Paparan</h3><div class="seg">'+MODS.map(x=>`<button data-m="${x[0]}" aria-pressed="${m===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Warna</h3><div class="pals">'+PALET.map(x=>`<button class="pal" data-p="${x[0]}" aria-pressed="${p===x[0]}"><span class="sw" style="background:${x[2]}"></span>${x[1]}</button>`).join('')+'</div>';
+  document.body.appendChild(o);
+  o.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.m) store.set('spbtg_mod',b.dataset.m); if(b.dataset.p) store.set('spbtg_pal',b.dataset.p); themeApply(); const n=themeGet();
+    o.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',n.m===x.dataset.m)); o.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',n.p===x.dataset.p)); };
+  setTimeout(()=>{ const off=e=>{ if(!o.contains(e.target)&&e.target.id!=='themeBtn'){ o.remove(); document.removeEventListener('click',off); } }; document.addEventListener('click',off); document.addEventListener('keydown',function k(e){ if(e.key==='Escape'){ o.remove(); document.removeEventListener('keydown',k); } }); },0);
 }
 function download(filename,data,type){
   const b=new Blob([data],{type:type||'text/plain;charset=utf-8'}), u=URL.createObjectURL(b), a=document.createElement('a');
@@ -665,6 +712,7 @@ function sum(){
 }
 $('#back').onclick=()=>{view={page:'home'};render();loadSumm()};
 $('#sumBtn').onclick=enterSum;
+$('#themeBtn').onclick=themePanel;
 render(); initDb();
 </script>
 </body>
