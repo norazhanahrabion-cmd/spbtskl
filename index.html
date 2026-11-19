@@ -235,7 +235,7 @@ async function writeRec(key){
   const c=CLASSES.find(x=>x.id===p.cid);
   if(!db) return;
   const pos=c.ids.indexOf(p.no); if(pos<0) return;
-  try{ await rpc('simpan',{p_kelas:p.cid,p_kunci:String(p.no),p_data:{nama:c.students[pos],buku:(mem[p.cid]&&mem[p.cid][p.no])||[],tak:(tak[p.cid]&&tak[p.cid][p.no])||[]}}); }catch(e){ pending[key]=p; throw e; }
+  try{ await rpc('simpan',{p_kelas:p.cid,p_kunci:String(p.no),p_data:{nama:c.students[pos],buku:(mem[p.cid]&&mem[p.cid][p.no])||[],tak:(tak[p.cid]&&tak[p.cid][p.no])||[],lk:c.books.map((_,bi)=>bi).filter(bi=>!okFor(c,pos+1,bi))}}); }catch(e){ pending[key]=p; throw e; }
 }
 function persist(cid,pos){
   const no=idAt(cid,pos), key=cid+'_'+no; pending[key]={cid,no};
@@ -263,10 +263,10 @@ try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ 
 function themePanel(){
   let o=document.getElementById('tm'); if(o){ o.remove(); return; }
   const {m,p}=themeGet(); o=document.createElement('div'); o.className='tm'; o.id='tm'; o.setAttribute('role','dialog'); o.setAttribute('aria-label','Tema');
-  o.innerHTML='<h3>Paparan</h3><div class="seg">'+MODS.map(x=>`<button data-m="${x[0]}" aria-pressed="${m===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Warna</h3><div class="pals">'+PALET.map(x=>`<button class="pal" data-p="${x[0]}" aria-pressed="${p===x[0]}"><span class="sw" style="background:${x[2]}"></span>${x[1]}</button>`).join('')+'</div>';
+  o.innerHTML='<h3>Paparan</h3><div class="seg">'+MODS.map(x=>`<button data-m="${x[0]}" aria-pressed="${m===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Bunyi notifikasi</h3><div class="seg">'+[['hidup','Hidup'],['mati','Mati']].map(x=>`<button data-b="${x[0]}" aria-pressed="${(store.get('spbtg_bunyi')==='mati')===(x[0]==='mati')}">${x[1]}</button>`).join('')+'</div><h3>Warna</h3><div class="pals">'+PALET.map(x=>`<button class="pal" data-p="${x[0]}" aria-pressed="${p===x[0]}"><span class="sw" style="background:${x[2]}"></span>${x[1]}</button>`).join('')+'</div>';
   document.body.appendChild(o);
-  o.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.m) store.set('spbtg_mod',b.dataset.m); if(b.dataset.p) store.set('spbtg_pal',b.dataset.p); themeApply(); const n=themeGet();
-    o.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',n.m===x.dataset.m)); o.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',n.p===x.dataset.p)); };
+  o.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.b){ store.set('spbtg_bunyi',b.dataset.b==='mati'?'mati':''); if(b.dataset.b==='hidup') chime(); } if(b.dataset.m) store.set('spbtg_mod',b.dataset.m); if(b.dataset.p) store.set('spbtg_pal',b.dataset.p); themeApply(); const n=themeGet();
+    o.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',n.m===x.dataset.m)); o.querySelectorAll('[data-b]').forEach(x=>x.setAttribute('aria-pressed',(store.get('spbtg_bunyi')==='mati')===(x.dataset.b==='mati'))); o.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',n.p===x.dataset.p)); };
   setTimeout(()=>{ const off=e=>{ if(!o.contains(e.target)&&e.target.id!=='themeBtn'){ o.remove(); document.removeEventListener('click',off); } }; document.addEventListener('click',off); document.addEventListener('keydown',function k(e){ if(e.key==='Escape'){ o.remove(); document.removeEventListener('keydown',k); } }); },0);
 }
 function download(filename,data,type){
@@ -555,10 +555,36 @@ async function initDb(){
 function tileName(c){ const nm=c.cls.charAt(0)+c.cls.slice(1).toLowerCase(); const m=loaded[c.id]?(c.label!==(c.base&&c.base.label)?c.label:''):((summ[c.id]&&summ[c.id].m)||''); return m||(c.year+' '+nm); }
 function cntOf(c){ if(loaded[c.id]) return c.students.length; const s=summ[c.id]||{}; return Math.max(0,c.students.length+(s.tm||0)-(s.bg||0)); }
 function stats(c){
-  if(!loaded[c.id]){ const s=summ[c.id]||{}; return {n:Math.min(s.n||0,cntOf(c)),t:s.t||0}; }
-  let n=0,t=0;
-  for(let i=1;i<=c.students.length;i++){ const r=getRec(c.id,i); if(r.length){n++; t+=r.length;} }
-  return {n,t};
+  const B=c.books.length;
+  if(!loaded[c.id]){ const s=summ[c.id]||{}, K=cntOf(c); let bk=0, cm=0; if(K) for(let bi=0;bi<B;bi++){ const m=Math.min((s.bm||{})[bi]||0,K); cm+=m; if(m>=K) bk++; } const ct=K*B; return {n:Math.min(s.n||0,K),t:s.t||0,bk,B,cm,ct,pc:ct?Math.floor(100*cm/ct):0}; }
+  const N=c.students.length; let n=0,t=0,bk=0,cm=0,ct=0;
+  for(let i=1;i<=N;i++){ const r=getRec(c.id,i); t+=r.length; if(r.length||takOf(c.id,i).length) n++; }
+  if(N) for(let bi=0;bi<B;bi++){ let ok=true; for(let i=1;i<=N;i++){ if(!okFor(c,i,bi)) continue; ct++; if(getRec(c.id,i).includes(bi)||takHas(c.id,i,bi)) cm++; else ok=false; } if(ok) bk++; }
+  return {n,t,bk,B,cm,ct,pc:ct?Math.floor(100*cm/ct):0};
+}
+function missedList(c){
+  const out=[]; c.students.forEach((nm,k)=>{ const no=k+1, miss=[]; c.books.forEach((b,bi)=>{ if(!okFor(c,no,bi)) return; if(getRec(c.id,no).includes(bi)||takHas(c.id,no,bi)) return; miss.push(bi); }); if(miss.length) out.push({no,nm,miss}); }); return out;
+}
+let _ac;
+function chime(){
+  if(store.get('spbtg_bunyi')==='mati') return;
+  try{ _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const ac=_ac; if(ac.state==='suspended') ac.resume(); const now=ac.currentTime;
+    [[659.25,0],[783.99,.17],[987.77,.34]].forEach(([f,d])=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(0.0001,now+d); g.gain.exponentialRampToValueAtTime(0.13,now+d+0.03); g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.75); o.start(now+d); o.stop(now+d+0.8); });
+  }catch(e){}
+}
+function checkMissed(c,mode,proceed){
+  const list=missedList(c), st=stats(c);
+  if(!c.students.length||!st.n||!list.length){ if(proceed) proceed(); return; }
+  chime();
+  const o=document.createElement('div'); o.className='ov'; o.setAttribute('role','alertdialog');
+  const lines=list.map(x=>`<div style="padding:5px 0;border-top:1px solid var(--line)">• <b style="font:600 14px var(--fb)">${x.no}. ${esc(x.nm)}</b><br><small style="color:var(--mut)">${x.miss.length} buku belum ditanda: ${x.miss.slice(0,2).map(i=>esc(c.books[i])).join(', ')}${x.miss.length>2?' dan '+(x.miss.length-2)+' lagi':''}</small></div>`).join('');
+  o.innerHTML=`<div class="dlg"><b>Ada murid yang tercicir ditanda</b><p style="color:var(--ink)"><b>${list.length}</b> murid belum ditanda (terima atau tak dapat) untuk sebahagian buku. Sila semak:</p><div style="max-height:40vh;overflow:auto;margin:0 0 4px">${lines}</div><div class="toolbar"><button class="btn" id="mkNo">${mode==='leave'?'Keluar juga':'Tutup'}</button><button class="btn pri" id="mkGo">Semak sekarang</button></div></div>`;
+  document.body.appendChild(o); o.querySelector('#mkGo').focus();
+  const close=()=>{ o.remove(); document.removeEventListener('keydown',kd); }, kd=e=>{ if(e.key==='Escape') close(); };
+  document.addEventListener('keydown',kd);
+  o.querySelector('#mkNo').onclick=()=>{ close(); if(mode==='leave'&&proceed) proceed(); };
+  o.querySelector('#mkGo').onclick=()=>{ close(); view.tab='murid'; view.open=list[0].no; render(); setTimeout(()=>{ const e=app.querySelector('.card.open'); if(e) e.scrollIntoView({block:'start'}); },50); };
 }
 function render(){
   const p=view.page;
@@ -569,19 +595,19 @@ function render(){
 }
 function home(){
   $('#title').innerHTML='SPBT G 2027<small>Rekod penerimaan buku teks</small>';
-  const act=CLASSES.filter(c=>c.students.length); let tot=0, done=0; act.forEach(c=>{ tot+=c.students.length; done+=stats(c).n; });
-  const pct=tot?Math.round(100*done/tot):0;
+  const act=CLASSES.filter(c=>cntOf(c)>0); let totB=0, done=0, bks=0, cmA=0, ctA=0; act.forEach(c=>{ const s=stats(c); done+=s.n; bks+=s.bk; totB+=s.B; cmA+=s.cm; ctA+=s.ct; });
+  const pct=ctA?Math.floor(100*cmA/ctA):0;
   let h='';
   if(!db) h+='<div class="banner">Pangkalan data belum disambung. Isi SUPABASE_URL dan SUPABASE_ANON_KEY dalam config.js (lihat PANDUAN).</div>';
-  h+=`<section class="hero"><h2>Pinjaman buku teks sesi 2027</h2><p>Pilih kelas anda, kemudian tanda buku yang telah diterima oleh murid. Setiap tanda disimpan serta-merta.</p><div class="meter"><div class="top"><b>${done}<span> / ${tot} murid</span></b><span>${pct}% dikemas kini</span></div><div class="bar"><i style="width:${pct}%"></i></div></div></section>`;
+  h+=`<section class="hero"><h2>Pinjaman buku teks sesi 2027</h2><p>Pilih kelas anda, kemudian tanda buku yang telah diterima oleh murid. Setiap tanda disimpan serta-merta.</p><div class="meter"><div class="top"><b>${done}<span> murid dikemas kini</span></b><span>${pct}% siap · ${bks} / ${totB} mata pelajaran lengkap</span></div><div class="bar"><i style="width:${pct}%"></i></div></div></section>`;
   for(let y=1;y<=6;y++){
     const cs=CLASSES.filter(c=>c.year===y); if(!cs.length) continue;
     h+=`<h2 class="yr" style="--yc:var(--y${y})">Tahun ${y}<span>${cs.length+' kelas'}</span></h2><div class="grid" style="--yc:var(--y${y})">`;
     for(const c of cs){
       const nm=c.cls.charAt(0)+c.cls.slice(1).toLowerCase();
       if(!c.books.length){ h+=`<div class="tile off"><span class="tl">Tahun ${y}</span><b>${nm}</b><span class="tg">${c.note||'Belum tersedia'}</span></div>`; continue; }
-      const s=stats(c), K=cntOf(c), p=K?Math.min(100,Math.round(100*s.n/K)):0;
-      const tkn=takCount(c); h+=`<button class="tile" data-id="${c.id}">${tkn?'<span class="bell" title="Murid belum dapat buku">'+BELL.replace('width="22" height="22"','')+tkn+'</span>':''}<span class="tl">${cntOf(c)?cntOf(c)+' murid':(loaded[c.id]?'tiada murid lagi':'murid baharu')}</span><b>${esc(tileName(c))}</b><span class="tg">${esc(curGuru(c)||'Belum pilih guru')}</span><div class="bar"><i style="width:${p}%"></i></div><span class="tp">${K?s.n+'/'+K+' dikemas kini':'tambah murid dalam kelas'}</span></button>`;
+      const s=stats(c), K=cntOf(c), p=s.pc;
+      const tkn=takCount(c); h+=`<button class="tile" data-id="${c.id}">${tkn?'<span class="bell" title="Murid belum dapat buku">'+BELL.replace('width="22" height="22"','')+tkn+'</span>':''}<span class="tl">${cntOf(c)?cntOf(c)+' murid':(loaded[c.id]?'tiada murid lagi':'murid baharu')}</span><b>${esc(tileName(c))}</b><span class="tg">${esc(curGuru(c)||'Belum pilih guru')}</span><div class="bar"><i style="width:${p}%"></i></div><span class="tp">${K?s.pc+'% siap · '+s.n+' murid dikemas kini':'tambah murid dalam kelas'}</span>${K?'<span class="tp" style="color:var(--mut);font-weight:500">'+s.bk+'/'+s.B+' mata pelajaran lengkap</span>':''}</button>`;
     }
     h+='</div>';
   }
@@ -595,7 +621,7 @@ function klass(){
   let h='';
   if(!db) h+='<div class="banner">Pangkalan data belum disambung – perubahan tidak disimpan.</div>';
   h+=notePanel(c);
-  { const s=stats(c), p=N?Math.round(100*s.n/N):0; h+=`<div class="stats"><div class="stat w"><b>${s.n}<span style="font:500 13px var(--fb);color:var(--mut)"> / ${N} murid dikemas kini</span></b><div class="bar"><i style="width:${p}%"></i></div></div><div class="stat"><b>${c.books.length}</b><span>tajuk buku</span></div><div class="stat"><b>${s.t}</b><span>buku diterima</span></div></div>`; }
+  { const s=stats(c), p=s.pc; h+=`<div class="stats"><div class="stat w"><b>${s.pc}%<span style="font:500 13px var(--fb);color:var(--mut)"> siap dikemas kini</span></b><div class="bar"><i style="width:${p}%"></i></div><span style="font-size:13px;color:var(--mut)">${s.bk} / ${s.B} mata pelajaran lengkap · ${s.n} murid dikemas kini</span></div><div class="stat"><b>${c.books.length}</b><span>tajuk buku</span></div><div class="stat"><b>${s.t}</b><span>buku diterima</span></div></div>`; }
   if(c.sementara) h+='<div class="banner" style="background:var(--g2);color:var(--g)">Senarai buku Tahun 1 mengikut senarai rasmi (BA/BT). Tambah nama murid dengan <b>+ Tambah murid</b>. Guna <b>Urus buku</b> hanya jika ada pembetulan.</div>';
   if(!N) h+='<div class="banner" style="background:var(--warnbg);color:var(--warn)">Belum ada murid. Tekan <b>+ Tambah murid</b> dan taip nama setiap murid (maksimum 40).</div>';
   h+=nameBox(c)+teacherBox(c);
@@ -628,7 +654,7 @@ function addStudent(c,name,cn){
   s.tambah=(s.tambah||[]).concat([{id:maxId+1,nama:name,cn:!!cn}]); saveRoster(c); return true;
 }
 function removeStudent(c,pos){
-  if(takOf(c.id,pos).length){ setTak(c.id,pos,[]); persist(c.id,pos); }
+  { const id0=c.ids[pos-1]; if(mem[c.id]) delete mem[c.id][id0]; if(tak[c.id]) delete tak[c.id][id0]; delete pending[c.id+'_'+id0]; if(db) rpc('simpan',{p_kelas:c.id,p_kunci:String(id0),p_data:{nama:'',buku:[],tak:[],lk:[]}}).catch(e=>console.error(e)); }
   const id=c.ids[pos-1], s=roster[c.id]=roster[c.id]||{tambah:[],buang:[]};
   s.buang=(s.buang||[]).concat([id]); saveRoster(c);
 }
@@ -710,7 +736,7 @@ function bind(c){
   app.querySelectorAll('[data-dx]').forEach(b=>b.onclick=()=>{ view.del=+b.dataset.dx; render(); });
   app.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{ view.del=null; render(); });
   app.querySelectorAll('[data-dy]').forEach(b=>b.onclick=()=>{ removeStudent(c,+b.dataset.dy); view.del=null; view.open=null; render(); });
-  $('#bSave').onclick=saveNow; $('#bXls').onclick=()=>downloadClassXlsx(c); $('#bPrint').onclick=()=>openPrint('SPBTG_2027_'+c.label.replace(/ /g,'_')+'_cetak.html',classPrint(c));
+  $('#bSave').onclick=async()=>{ await saveNow(); checkMissed(c,'save'); }; $('#bXls').onclick=()=>downloadClassXlsx(c); $('#bPrint').onclick=()=>openPrint('SPBTG_2027_'+c.label.replace(/ /g,'_')+'_cetak.html',classPrint(c));
   const gs=$('#gsel'); if(gs) gs.onchange=()=>{
     let v=gs.value;
     if(v==='__lain'){ v=(window.prompt?prompt('Taip nama guru kelas:'):'')||''; if(!v){render();return;} if(!TEACHERS.includes(v)) TEACHERS.push(v); }
@@ -777,7 +803,7 @@ function sum(){
   const cp=$('#cpy'); if(cp) cp.onclick=async()=>{ const ta=$('#csv'); ta.select(); try{ await navigator.clipboard.writeText(ta.value); $('#cpyMsg').textContent='Disalin ✓'; }catch(e){ $('#cpyMsg').textContent='Tekan lama pada kotak untuk salin'; } };
   window.scrollTo(0,sy);
 }
-$('#back').onclick=()=>{view={page:'home'};render();loadSumm()};
+$('#back').onclick=()=>{ const go=()=>{view={page:'home'};render();loadSumm()}; if(view.page==='class'){ const c=byId(view.id); if(c) checkMissed(c,'leave',go); else go(); } else go(); };
 $('#sumBtn').onclick=enterSum;
 $('#themeBtn').onclick=themePanel;
 render(); initDb();
