@@ -48,6 +48,21 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 :root[data-pal="grafit"][data-theme="light"]{--bg:#f1f1f2;--card:#fff;--ink:#1a1b1e;--mut:#65686f;--line:#dcdde0;--g:#3d4350;--g2:#e6e8ec;--gi:#fff}
 :root[data-pal="grafit"][data-theme="dark"]{--bg:#121315;--card:#1c1d21;--ink:#ececee;--mut:#9a9ca3;--line:#2e3036;--g:#b8c0d4;--g2:#2a2e38;--gi:#14161b}
 
+.row.tak{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 10%,var(--card))}
+.row.tak .box{background:var(--bad);border-color:var(--bad);color:#fff}
+.xb{margin-left:auto;flex:0 0 auto;border:1px solid var(--line);border-radius:9px;padding:5px 9px;font-size:12px;font-weight:700;color:var(--bad);background:var(--card)}
+.row .nm{min-width:0}
+.cell.takc{background:var(--bad);color:#fff}
+.note{background:color-mix(in srgb,var(--bad) 9%,var(--card));border:1.5px solid var(--bad);border-radius:14px;padding:10px 14px;margin:0 0 12px}
+.note summary{cursor:pointer;font-weight:700;display:flex;align-items:center;gap:8px;list-style:none}
+.note summary::-webkit-details-marker{display:none}
+.note summary svg{flex:0 0 22px;stroke:var(--bad)}
+.note .bd2{margin:6px 0 0}
+.ni{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.ni b{flex:1 1 100%}.ni span{flex:1;min-width:0;color:var(--mut)}.ni small{color:var(--mut)}
+.ni button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:9px;padding:5px 10px;font:600 12.5px var(--fb);cursor:pointer}
+.tile .bell{position:absolute;top:10px;right:10px;display:flex;align-items:center;gap:3px;background:var(--bad);color:#fff;border-radius:99px;padding:2px 8px 2px 6px;font:700 12px var(--fb)}
+.tile .bell svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2.2}
 .tt{margin-left:2px}@media(max-width:520px){.tt{display:none}header .btn{padding:8px 11px}header{gap:8px;padding:10px 12px}header .mark{display:none}header h1{font-size:17px}}
 .tm{position:fixed;z-index:60;top:62px;right:12px;width:min(320px,calc(100vw - 24px));background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:14px}
 .tm h3{margin:0 0 8px;font:700 14px var(--fd)}
@@ -214,7 +229,7 @@ async function writeRec(key){
   const c=CLASSES.find(x=>x.id===p.cid);
   if(!db) return;
   const pos=c.ids.indexOf(p.no); if(pos<0) return;
-  try{ await rpc('simpan',{p_kelas:p.cid,p_kunci:String(p.no),p_data:{nama:c.students[pos],buku:(mem[p.cid]&&mem[p.cid][p.no])||[]}}); }catch(e){ pending[key]=p; throw e; }
+  try{ await rpc('simpan',{p_kelas:p.cid,p_kunci:String(p.no),p_data:{nama:c.students[pos],buku:(mem[p.cid]&&mem[p.cid][p.no])||[],tak:(tak[p.cid]&&tak[p.cid][p.no])||[]}}); }catch(e){ pending[key]=p; throw e; }
 }
 function persist(cid,pos){
   const no=idAt(cid,pos), key=cid+'_'+no; pending[key]={cid,no};
@@ -347,11 +362,42 @@ function shortPrint(){
 function okFor(c,no,bi){ return !(c.lock&&c.lock.includes(bi)) || ((c.elig&&c.elig[no-1]||'')[bi]!=='0'); }
 function isCn(c,no){ return !!(c.cn&&c.cn.includes(no)); }
 function blockMsg(c,bi){ return (c.books[bi].toUpperCase().includes('CINA')?'Murid ini TIDAK mengambil Bahasa Cina':'Murid Bahasa Cina – tidak mengambil Bahasa Arab'); }
+const tak={};
+const BELL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
+function takOf(cid,no){ const id=idAt(cid,no); return (tak[cid]&&tak[cid][id])||[]; }
+function setTak(cid,no,arr){ (tak[cid]=tak[cid]||{})[idAt(cid,no)]=arr; }
+function takHas(cid,no,bi){ return takOf(cid,no).some(e=>e.b===bi); }
+function untak(cid,no,bis){ const a=takOf(cid,no), n=a.filter(e=>!bis.includes(e.b)); if(n.length!==a.length) setTak(cid,no,n); }
+function takCount(c){ if(loaded[c.id]){ let n=0; Object.values(tak[c.id]||{}).forEach(a=>n+=a.length); return n; } return (summ[c.id]&&summ[c.id].tk)||0; }
+function ago(t){ const m=Math.max(0,Math.round((Date.now()-t)/60000)); if(m<1) return 'baru sebentar tadi'; if(m<60) return m+' minit lalu'; const h=Math.round(m/60); if(h<24) return h+' jam lalu'; return Math.round(h/24)+' hari lalu'; }
+function confirmDlg(title,html,okLabel,onOk){
+  const o=document.createElement('div'); o.className='ov'; o.setAttribute('role','alertdialog');
+  o.innerHTML=`<div class="dlg"><b>${title}</b><p style="color:var(--ink)">${html}</p><div class="toolbar"><button class="btn pri" id="cfOk">${okLabel}</button><button class="btn" id="cfNo">Batal</button></div></div>`;
+  document.body.appendChild(o); o.querySelector('#cfNo').focus();
+  const close=()=>{ o.remove(); document.removeEventListener('keydown',kd); }, kd=e=>{ if(e.key==='Escape') close(); };
+  document.addEventListener('keydown',kd);
+  o.querySelector('#cfOk').onclick=()=>{ close(); onOk(); }; o.querySelector('#cfNo').onclick=close;
+}
+function flagTak(c,no,bi){
+  if(takHas(c.id,no,bi)){ untak(c.id,no,[bi]); persist(c.id,no); render(); return; }
+  confirmDlg('Sahkan: murid tidak dapat buku',`<b>${esc(c.students[no-1])}</b> (${esc(c.label)}) <b>TIDAK menerima</b><br>${esc(c.books[bi])}.<br><small style="color:var(--mut)">Notifikasi akan dipaparkan di muka depan kelas ini. Tekan Batal jika anda tersilap.</small>`,'Ya, tidak dapat',()=>{
+    const cur=new Set(getRec(c.id,no)); cur.delete(bi); setLocal(c.id,no,[...cur].sort((a,b)=>a-b));
+    const a=takOf(c.id,no).filter(e=>e.b!==bi); a.push({b:bi,n:c.books[bi],l:c.label,t:Date.now()}); setTak(c.id,no,a);
+    persist(c.id,no); render(); toast('Notifikasi dihantar ✓'); });
+}
+function notePanel(c){
+  const items=[]; c.students.forEach((nm,k)=>takOf(c.id,k+1).forEach(e=>items.push({no:k+1,nm,...e})));
+  if(!items.length) return '';
+  items.sort((a,b)=>b.t-a.t);
+  return `<details class="note" open><summary>${BELL}<span><b>${items.length}</b> notifikasi: murid belum dapat buku</span></summary><div class="bd2">`+items.map(e=>`<div class="ni"><b>${e.no}. ${esc(e.nm)}</b><span>${esc(e.l||c.label)} · ${esc(e.n||c.books[e.b]||'')}</span><small>${ago(e.t)}</small><button data-nx="${e.no}:${e.b}">Buang tanda</button></div>`).join('')+'</div></details>';
+}
+function allNotes(){ const out=[]; CLASSES.forEach(c=>{ if(!loaded[c.id]) return; c.students.forEach((nm,k)=>takOf(c.id,k+1).forEach(e=>out.push({c,nm,no:k+1,...e}))); }); return out.sort((a,b)=>b.t-a.t); }
 function toggle(cid,no,bi,force){
   const _c=CLASSES.find(x=>x.id===cid); if(!okFor(_c,no,bi)){ toast(blockMsg(_c,bi)); return; }
   const cur = new Set(getRec(cid,no));
   const on = force===undefined ? !cur.has(bi) : force;
   on ? cur.add(bi) : cur.delete(bi);
+  if(on) untak(cid,no,[bi]);
   setLocal(cid,no,[...cur].sort((a,b)=>a-b)); persist(cid,no);
 }
 const SB=window.SB_CONFIG||{};
@@ -365,11 +411,11 @@ async function rpc(fn,args){
   try{ return JSON.parse(tx); }catch(e){ return null; }
 }
 function ingestRows(rows,cids){
-  cids.forEach(cid=>{ mem[cid]={}; delete guru[cid]; delete roster[cid]; loaded[cid]=1; });
+  cids.forEach(cid=>{ mem[cid]={}; tak[cid]={}; delete guru[cid]; delete roster[cid]; loaded[cid]=1; });
   rows.forEach(r=>{
     if(r.k==='_guru') guru[r.c]=(r.d&&r.d.guru)||'';
     else if(r.k==='_senarai') roster[r.c]={tambah:(r.d&&r.d.tambah)||[],buang:(r.d&&r.d.buang)||[],buku:(r.d&&r.d.buku)||undefined,nama:(r.d&&r.d.nama)||undefined};
-    else if(mem[r.c]) mem[r.c][+r.k]=(r.d&&r.d.buku)||[];
+    else if(mem[r.c]){ mem[r.c][+r.k]=(r.d&&r.d.buku)||[]; if(r.d&&r.d.tak&&r.d.tak.length) tak[r.c][+r.k]=r.d.tak; }
   });
   cids.forEach(cid=>{ const c=byId(cid); if(c) applyRoster(c); });
   if(view.page!=='class'||!document.activeElement||document.activeElement===document.body||document.activeElement.tagName==='BUTTON') render();
@@ -523,7 +569,7 @@ function home(){
       const nm=c.cls.charAt(0)+c.cls.slice(1).toLowerCase();
       if(!c.books.length){ h+=`<div class="tile off"><span class="tl">Tahun ${y}</span><b>${nm}</b><span class="tg">${c.note||'Belum tersedia'}</span></div>`; continue; }
       const s=stats(c), K=cntOf(c), p=K?Math.min(100,Math.round(100*s.n/K)):0;
-      h+=`<button class="tile" data-id="${c.id}"><span class="tl">${cntOf(c)?cntOf(c)+' murid':(loaded[c.id]?'tiada murid lagi':'murid baharu')}</span><b>${esc(tileName(c))}</b><span class="tg">${esc(curGuru(c)||'Belum pilih guru')}</span><div class="bar"><i style="width:${p}%"></i></div><span class="tp">${K?s.n+'/'+K+' dikemas kini':'tambah murid dalam kelas'}</span></button>`;
+      const tkn=takCount(c); h+=`<button class="tile" data-id="${c.id}">${tkn?'<span class="bell" title="Murid belum dapat buku">'+BELL.replace('width="22" height="22"','')+tkn+'</span>':''}<span class="tl">${cntOf(c)?cntOf(c)+' murid':(loaded[c.id]?'tiada murid lagi':'murid baharu')}</span><b>${esc(tileName(c))}</b><span class="tg">${esc(curGuru(c)||'Belum pilih guru')}</span><div class="bar"><i style="width:${p}%"></i></div><span class="tp">${K?s.n+'/'+K+' dikemas kini':'tambah murid dalam kelas'}</span></button>`;
     }
     h+='</div>';
   }
@@ -536,6 +582,7 @@ function klass(){
   $('#title').innerHTML=`${c.label}<small>${N} murid · ${c.books.length} tajuk buku · ${c.year===1?'murid baharu Tahun 1':'naik dari '+c.from_label}</small>`;
   let h='';
   if(!db) h+='<div class="banner">Pangkalan data belum disambung – perubahan tidak disimpan.</div>';
+  h+=notePanel(c);
   { const s=stats(c), p=N?Math.round(100*s.n/N):0; h+=`<div class="stats"><div class="stat w"><b>${s.n}<span style="font:500 13px var(--fb);color:var(--mut)"> / ${N} murid dikemas kini</span></b><div class="bar"><i style="width:${p}%"></i></div></div><div class="stat"><b>${c.books.length}</b><span>tajuk buku</span></div><div class="stat"><b>${s.t}</b><span>buku diterima</span></div></div>`; }
   if(c.sementara) h+='<div class="banner" style="background:var(--g2);color:var(--g)">Senarai buku Tahun 1 mengikut senarai rasmi (BA/BT). Tambah nama murid dengan <b>+ Tambah murid</b>. Guna <b>Urus buku</b> hanya jika ada pembetulan.</div>';
   if(!N) h+='<div class="banner" style="background:var(--warnbg);color:var(--warn)">Belum ada murid. Tekan <b>+ Tambah murid</b> dan taip nama setiap murid (maksimum 40).</div>';
@@ -569,6 +616,7 @@ function addStudent(c,name,cn){
   s.tambah=(s.tambah||[]).concat([{id:maxId+1,nama:name,cn:!!cn}]); saveRoster(c); return true;
 }
 function removeStudent(c,pos){
+  if(takOf(c.id,pos).length){ setTak(c.id,pos,[]); persist(c.id,pos); }
   const id=c.ids[pos-1], s=roster[c.id]=roster[c.id]||{tambah:[],buang:[]};
   s.buang=(s.buang||[]).concat([id]); saveRoster(c);
 }
@@ -614,7 +662,7 @@ function byBook(c){
   let h='<div class="chips">'+c.books.map((b,i)=>`<button class="chip ${i===bi?'on':''}" data-b="${i}">${b}<small>${countBook(c,i)}</small></button>`).join('')+'</div>';
   h+=`<div class="toolbar"><span class="cnt"><b>${countBook(c,bi)}</b> / ${N} murid menerima</span><span class="sp"></span><button class="btn" data-all="1">Tanda semua</button><button class="btn" data-all="0">Kosongkan</button></div>`;
   if(c.lock&&c.lock.includes(bi)) h+=`<div class="banner" style="background:var(--g2);color:var(--g)">${c.books[bi].toUpperCase().includes('CINA')?'Hanya murid bertanda <b>BAHASA CINA</b> mengambil buku ini ('+(c.cn||[]).length+' murid). Murid lain dikunci.':'Murid <b>BAHASA CINA</b> tidak mengambil buku ini. Mereka dikunci.'}</div>`;
-  c.students.forEach((nm,k)=>{ const ok=okFor(c,k+1,bi), on=ok&&getRec(c.id,k+1).includes(bi); h+=`<div class="row ${on?'on':''} ${ok?'':'lock'}" data-s="${k+1}"><span class="no">${k+1}</span><span class="nm">${nm}${isCn(c,k+1)?' <span class="cn">Bahasa Cina</span>':''}</span>${ok?'<span class="box">✓</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
+  c.students.forEach((nm,k)=>{ const ok=okFor(c,k+1,bi), tk=ok&&takHas(c.id,k+1,bi), on=ok&&!tk&&getRec(c.id,k+1).includes(bi); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-s="${k+1}"><span class="no">${k+1}</span><span class="nm">${nm}${isCn(c,k+1)?' <span class="cn">Bahasa Cina</span>':''}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+(k+1)+':'+bi+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
   return h;
 }
 function byStudent(c){
@@ -624,7 +672,7 @@ function byStudent(c){
     h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.length}/${c.books.length}</span></div>`;
     if(open){
       h+='<div class="bd"><div class="toolbar" style="margin-top:10px"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button><span class="sp"></span>'+(view.del===no?'<span class="cnt">Buang murid ini?</span><button class="btn dng" data-dy="'+no+'">Ya, buang</button><button class="btn" data-dn="1">Batal</button>':'<button class="btn dng" data-dx="'+no+'">Buang murid</button>')+'</div>';
-      c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), on=ok&&r.includes(i); h+=`<div class="row ${on?'on':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">✓</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
+      c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
       h+='</div>';
     }
     h+='</div>';
@@ -633,7 +681,7 @@ function byStudent(c){
 }
 function matrix(c){
   let h='<div class="tw"><table><thead><tr><th class="n">Nama murid</th>'+c.books.map(b=>`<th><div>${b}</div></th>`).join('')+'</tr></thead><tbody>';
-  c.students.forEach((nm,k)=>{ const r=getRec(c.id,k+1); h+=`<tr><td class="n">${k+1}. ${nm}${isCn(c,k+1)?' <span class="cn">BC</span>':''}</td>`+c.books.map((b,i)=>okFor(c,k+1,i)?`<td class="cell ${r.includes(i)?'on':''}" data-m="${k+1}:${i}">✓</td>`:`<td class="cell lockc" data-m="${k+1}:${i}">×</td>`).join('')+'</tr>'; });
+  c.students.forEach((nm,k)=>{ const r=getRec(c.id,k+1); h+=`<tr><td class="n">${k+1}. ${nm}${isCn(c,k+1)?' <span class="cn">BC</span>':''}</td>`+c.books.map((b,i)=>okFor(c,k+1,i)?`<td class="cell ${takHas(c.id,k+1,i)?'takc':(r.includes(i)?'on':'')}" data-m="${k+1}:${i}">${takHas(c.id,k+1,i)?'✗':'✓'}</td>`:`<td class="cell lockc" data-m="${k+1}:${i}">×</td>`).join('')+'</tr>'; });
   return h+'</tbody></table></div>';
 }
 function saveGuru(c,name){
@@ -658,13 +706,15 @@ function bind(c){
   };
   const N=c.students.length, all=Array.from({length:c.books.length},(_,i)=>i);
   app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{view.book=+b.dataset.b;render()});
-  app.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{ const on=b.dataset.all==='1'; for(let i=1;i<=N;i++) if(okFor(c,i,view.book)) toggle(c.id,i,view.book,on); render(); });
+  app.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{ const on=b.dataset.all==='1'; const run=()=>{ for(let i=1;i<=N;i++){ if(okFor(c,i,view.book)) toggle(c.id,i,view.book,on); if(!on) untak(c.id,i,[view.book]); } render(); }; if(on) run(); else confirmDlg('Kosongkan tanda?',`Semua tanda untuk <b>${esc(c.books[view.book])}</b> di ${esc(c.label)} akan dikosongkan.`,'Ya, kosongkan',run); });
+  app.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const [n,i]=b.dataset.x.split(':').map(Number); flagTak(c,n,i); });
+  app.querySelectorAll('[data-nx]').forEach(b=>b.onclick=()=>{ const [n,i]=b.dataset.nx.split(':').map(Number); untak(c.id,n,[i]); persist(c.id,n); render(); });
   app.querySelectorAll('.row[data-s]').forEach(r=>r.onclick=()=>{ toggle(c.id,+r.dataset.s,view.book); render(); });
   app.querySelectorAll('[data-o]').forEach(r=>r.onclick=()=>{ const n=+r.dataset.o; view.open=view.open===n?null:n; render(); });
-  app.querySelectorAll('[data-sa]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.sa; setLocal(c.id,n,all.filter(i=>okFor(c,n,i))); persist(c.id,n); render(); });
-  app.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.sc; setLocal(c.id,n,[]); persist(c.id,n); render(); });
+  app.querySelectorAll('[data-sa]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.sa; setLocal(c.id,n,all.filter(i=>okFor(c,n,i))); untak(c.id,n,all); persist(c.id,n); render(); });
+  app.querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{ const n=+b.dataset.sc; confirmDlg('Kosongkan tanda?',`Semua tanda untuk <b>${esc(c.students[n-1])}</b> akan dikosongkan.`,'Ya, kosongkan',()=>{ setLocal(c.id,n,[]); setTak(c.id,n,[]); persist(c.id,n); render(); }); });
   app.querySelectorAll('[data-sb]').forEach(r=>r.onclick=()=>{ const [n,i]=r.dataset.sb.split(':').map(Number); toggle(c.id,n,i); render(); });
-  app.querySelectorAll('[data-m]').forEach(td=>td.onclick=()=>{ const [n,i]=td.dataset.m.split(':').map(Number); toggle(c.id,n,i); if(!td.classList.contains('lockc')) td.classList.toggle('on'); });
+  app.querySelectorAll('[data-m]').forEach(td=>td.onclick=()=>{ const [n,i]=td.dataset.m.split(':').map(Number); toggle(c.id,n,i); if(!td.classList.contains('lockc')){ td.classList.remove('takc'); td.classList.toggle('on'); } });
 }
 function needOf(c,bi){ let n=0; for(let i=0;i<c.students.length;i++) if((c.elig&&c.elig[i]?c.elig[i][bi]:'1')==='1') n++; return n; }
 function recvOf(c,bi){ let n=0; for(let i=0;i<c.students.length;i++){ if((c.elig&&c.elig[i]?c.elig[i][bi]:'1')!=='1') continue; if(getRec(c.id,i+1).includes(bi)) n++; } return n; }
@@ -679,6 +729,9 @@ function sum(){
     h+='<table class="sum"><thead><tr><th>Kelas</th><th>Guru kelas</th><th>Murid</th><th>Dikemas kini</th><th>Jumlah buku ditanda</th></tr></thead><tbody>';
     for(const c of CLASSES){ if(!c.students.length){h+=`<tr><td>${c.label}</td><td colspan="4" style="color:var(--mut)">${c.note}</td></tr>`;continue;} const s=stats(c); h+=`<tr><td><b>${c.label}</b></td><td>${curGuru(c)||'—'}</td><td>${c.students.length}</td><td>${s.n}</td><td>${s.t}</td></tr>`; }
     h+='</tbody></table>';
+    { const ns=allNotes(); h+='<h2>Notifikasi: murid belum dapat buku</h2>';
+      if(!ns.length) h+='<p style="margin:0 0 10px;color:var(--mut);font-size:14px">Tiada notifikasi.</p>';
+      else { h+='<div class="tw" style="max-height:none"><table><thead><tr><th class="n">Murid</th><th>Kelas</th><th>Buku</th><th>Masa</th></tr></thead><tbody>'+ns.map(e=>`<tr><td class="n">${esc(e.nm)}</td><td>${esc(e.c.label)}</td><td style="text-align:left">${esc(e.n||e.c.books[e.b]||'')}</td><td>${ago(e.t)}</td></tr>`).join('')+'</tbody></table></div><div class="toolbar" style="margin-top:10px"><button class="btn" id="bNcsv">Muat turun senarai (CSV)</button></div>'; } }
     h+='<h2>Borang SPBT G (xlsx)</h2><p style="margin:0 0 10px;color:var(--mut);font-size:14px">Jana borang SPBT G 2027 menggunakan templat asal, diisi dengan rekod guru. Setiap kelas satu fail; semua dalam satu ZIP.</p><div class="toolbar"><button class="btn pri" id="bAll">Muat turun semua borang (ZIP)</button></div>';
   } else {
     const years=[...new Set(CLASSES.filter(c=>c.students.length).map(c=>c.year))];
@@ -705,6 +758,7 @@ function sum(){
   app.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{view.stab=b.dataset.st;render()});
   app.querySelectorAll('[data-sy]').forEach(b=>b.onclick=()=>{view.syear=+b.dataset.sy;render()});
   const ba=$('#bAll'); if(ba) ba.onclick=downloadAllXlsx;
+  const bn=$('#bNcsv'); if(bn) bn.onclick=()=>{ const q=s=>'"'+String(s).replace(/"/g,'""')+'"'; offer('murid_tidak_dapat_buku.csv','\ufeffMurid,Kelas,Buku,Masa\n'+allNotes().map(e=>[e.nm,e.c.label,e.n||e.c.books[e.b]||'',new Date(e.t).toLocaleString('ms-MY')].map(q).join(',')).join('\n')); };
   const ss=$('#sSave'); if(ss) ss.onclick=()=>offer('Rumusan_kekurangan_buku_2027.csv','\ufeff'+$('#csv').value);
   const sp=$('#sPrint'); if(sp) sp.onclick=()=>openPrint('Rumusan_kekurangan_buku_2027_cetak.html',shortPrint());
   const cp=$('#cpy'); if(cp) cp.onclick=async()=>{ const ta=$('#csv'); ta.select(); try{ await navigator.clipboard.writeText(ta.value); $('#cpyMsg').textContent='Disalin ✓'; }catch(e){ $('#cpyMsg').textContent='Tekan lama pada kotak untuk salin'; } };
