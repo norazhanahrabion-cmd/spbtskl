@@ -705,12 +705,12 @@ function byBook(c){
   return h;
 }
 function byStudent(c){
-  let h='';
+  let h='<p style="color:var(--mut);font-size:14px;margin:4px 2px 10px">Murid berpindah keluar? Tekan nama murid, kemudian <b>Buang – berpindah keluar</b>. Boleh dipulihkan di bahagian bawah.</p>';
   c.students.forEach((nm,k)=>{
     const no=k+1, r=getRec(c.id,no), open=view.open===no;
     h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.length}/${c.books.length}</span></div>`;
     if(open){
-      h+='<div class="bd"><div class="toolbar" style="margin-top:10px">'+(view.del===no?'<span class="sp"></span><span class="cnt">Buang murid ini?</span><button class="btn" data-dn="1">Batal</button><button class="btn dng" data-dy="'+no+'">Ya, buang</button>':'<button class="btn dng" data-dx="'+no+'">Buang murid</button><span style="display:flex;gap:8px;margin-left:auto"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button></span>')+'</div>';
+      h+='<div class="bd"><div class="toolbar" style="margin-top:10px">'+(view.del===no?'<span class="sp"></span><span class="cnt">Murid ini berpindah keluar? Buang daripada senarai dan borang?</span><button class="btn" data-dn="1">Batal</button><button class="btn dng" data-dy="'+no+'">Ya, buang</button>':'<button class="btn dng" data-dx="'+no+'">Buang – berpindah keluar</button><span style="display:flex;gap:8px;margin-left:auto"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button></span>')+'</div>';
       c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
       h+='</div>';
     }
