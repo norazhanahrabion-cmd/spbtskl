@@ -120,9 +120,9 @@ h2.yr span{margin-left:auto;font:500 13px var(--fb);color:var(--mut)}
 .tabs{display:flex;gap:4px;margin:4px 0 14px;background:var(--g2);padding:4px;border-radius:14px}
 .tabs button{flex:1;border:0;background:transparent;color:var(--mut);padding:10px 6px;border-radius:11px;font-size:14.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
 .tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px;scrollbar-width:thin}
-.chip{flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
-.chip small{display:inline-grid;place-items:center;min-width:24px;height:22px;padding:0 6px;border-radius:99px;background:var(--g2);color:var(--g);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:10px;padding:2px 2px 12px}
+.chip{flex:0 1 auto;max-width:100%;display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:12px 18px;min-height:48px;font-size:16px;font-weight:600;cursor:pointer;text-align:left;transition:background .15s,border-color .15s}
+.chip small{display:inline-grid;place-items:center;min-width:28px;height:26px;padding:0 8px;border-radius:99px;background:var(--g2);color:var(--g);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .chip.on{background:var(--yc);border-color:var(--yc);color:#fff}
 .chip.on small{background:rgba(255,255,255,.25);color:#fff}
 .row{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:12px 14px;margin-bottom:8px;cursor:pointer;user-select:none;border:1.5px solid transparent;box-shadow:var(--sh);transition:background .15s,border-color .15s}
@@ -263,10 +263,10 @@ try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ 
 function themePanel(){
   let o=document.getElementById('tm'); if(o){ o.remove(); return; }
   const {m,p}=themeGet(); o=document.createElement('div'); o.className='tm'; o.id='tm'; o.setAttribute('role','dialog'); o.setAttribute('aria-label','Tema');
-  o.innerHTML='<h3>Paparan</h3><div class="seg">'+MODS.map(x=>`<button data-m="${x[0]}" aria-pressed="${m===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Bunyi notifikasi</h3><div class="seg">'+[['hidup','Hidup'],['mati','Mati']].map(x=>`<button data-b="${x[0]}" aria-pressed="${(store.get('spbtg_bunyi')==='mati')===(x[0]==='mati')}">${x[1]}</button>`).join('')+'</div><h3>Warna</h3><div class="pals">'+PALET.map(x=>`<button class="pal" data-p="${x[0]}" aria-pressed="${p===x[0]}"><span class="sw" style="background:${x[2]}"></span>${x[1]}</button>`).join('')+'</div>';
+  o.innerHTML='<h3>Paparan</h3><div class="seg">'+MODS.map(x=>`<button data-m="${x[0]}" aria-pressed="${m===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Bunyi notifikasi (popup tercicir)</h3><div class="seg">'+[['','Biasa'],['perlahan','Perlahan'],['mati','Mati']].map(x=>`<button data-b="${x[0]}" aria-pressed="${(store.get('spbtg_bunyi')||'')===x[0]}">${x[1]}</button>`).join('')+'</div><h3>Warna</h3><div class="pals">'+PALET.map(x=>`<button class="pal" data-p="${x[0]}" aria-pressed="${p===x[0]}"><span class="sw" style="background:${x[2]}"></span>${x[1]}</button>`).join('')+'</div>';
   document.body.appendChild(o);
-  o.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.b){ store.set('spbtg_bunyi',b.dataset.b==='mati'?'mati':''); if(b.dataset.b==='hidup') chime(); } if(b.dataset.m) store.set('spbtg_mod',b.dataset.m); if(b.dataset.p) store.set('spbtg_pal',b.dataset.p); themeApply(); const n=themeGet();
-    o.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',n.m===x.dataset.m)); o.querySelectorAll('[data-b]').forEach(x=>x.setAttribute('aria-pressed',(store.get('spbtg_bunyi')==='mati')===(x.dataset.b==='mati'))); o.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',n.p===x.dataset.p)); };
+  o.onclick=e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.b!==undefined&&b.hasAttribute('data-b')){ store.set('spbtg_bunyi',b.dataset.b); if(b.dataset.b!=='mati') chime(); } if(b.dataset.m) store.set('spbtg_mod',b.dataset.m); if(b.dataset.p) store.set('spbtg_pal',b.dataset.p); themeApply(); const n=themeGet();
+    o.querySelectorAll('[data-m]').forEach(x=>x.setAttribute('aria-pressed',n.m===x.dataset.m)); o.querySelectorAll('[data-b]').forEach(x=>x.setAttribute('aria-pressed',(store.get('spbtg_bunyi')||'')===x.dataset.b)); o.querySelectorAll('[data-p]').forEach(x=>x.setAttribute('aria-pressed',n.p===x.dataset.p)); };
   setTimeout(()=>{ const off=e=>{ if(!o.contains(e.target)&&e.target.id!=='themeBtn'){ o.remove(); document.removeEventListener('click',off); } }; document.addEventListener('click',off); document.addEventListener('keydown',function k(e){ if(e.key==='Escape'){ o.remove(); document.removeEventListener('keydown',k); } }); },0);
 }
 function download(filename,data,type){
@@ -568,9 +568,9 @@ function missedList(c){
 let _ac;
 function chime(){
   if(store.get('spbtg_bunyi')==='mati') return;
-  try{ _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const ac=_ac; if(ac.state==='suspended') ac.resume(); const now=ac.currentTime;
+  try{ _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const ac=_ac; if(ac.state==='suspended') ac.resume(); const now=ac.currentTime, vol=store.get('spbtg_bunyi')==='perlahan'?0.035:0.13;
     [[659.25,0],[783.99,.17],[987.77,.34]].forEach(([f,d])=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(ac.destination);
-      g.gain.setValueAtTime(0.0001,now+d); g.gain.exponentialRampToValueAtTime(0.13,now+d+0.03); g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.75); o.start(now+d); o.stop(now+d+0.8); });
+      g.gain.setValueAtTime(0.0001,now+d); g.gain.exponentialRampToValueAtTime(vol,now+d+0.03); g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.75); o.start(now+d); o.stop(now+d+0.8); });
   }catch(e){}
 }
 function checkMissed(c,mode,proceed){
