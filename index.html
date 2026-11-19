@@ -66,6 +66,7 @@ https://github.com/nodeca/pako/blob/main/LICENSE
 .tt{margin-left:2px}@media(max-width:520px){.tt{display:none}header .btn{padding:8px 11px}header{gap:8px;padding:10px 12px}header .mark{display:none}header h1{font-size:17px}}
 .tm{position:fixed;z-index:60;top:62px;right:12px;width:min(320px,calc(100vw - 24px));background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:14px}
 .tm h3{margin:0 0 8px;font:700 14px var(--fd)}
+.tabs+.seg,.seg.sg2{display:flex;gap:6px}.seg.sg2 button{flex:1;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:11px 6px;font:600 14px var(--fb);cursor:pointer}.seg.sg2 button[aria-pressed=true]{border-color:var(--g);background:var(--g2);color:var(--g)}
 .tm .seg{display:flex;gap:6px;margin-bottom:14px}
 .tm .seg button{flex:1;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:9px 6px;font:600 13.5px var(--fb);cursor:pointer}
 .tm .seg button[aria-pressed=true]{border-color:var(--g);background:var(--g2);color:var(--g)}
@@ -180,6 +181,7 @@ h2{font:700 14px var(--fd);margin:22px 0 8px;color:var(--mut)}
 .panel input[type=text]{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);text-transform:uppercase}
 .panel label.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14.5px}
 .panel label.chk input{width:20px;height:20px}
+.tbx{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;display:grid;gap:10px}.tbx .tt{font:700 15px var(--fd)}.tbx .tr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tbx .tr label{min-width:150px;font-size:13px;font-weight:600;color:var(--mut)}.tbx input[type=date]{padding:9px 10px;font:600 15px var(--fb);border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.hn{font-size:13px;color:var(--mut);margin:0}.sgp{height:38px;max-width:140px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px}.btn[disabled]{opacity:.5;cursor:default}
 .btn.dng{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
 .hide{display:none!important}
 </style>
@@ -310,7 +312,7 @@ function classPrint(c){
       const low=c.books.map(()=>'<td class="m"></td>').join('');
       const n=has?r.filter(i=>okFor(c,no,i)).length:0; sum+=n;
       const first=k===pg*10;
-      rows+=`<tr><td rowspan="2">${no}</td><td rowspan="2" class="nm">${has?esc(c.students[k]):''}</td>${marks}<td rowspan="2" class="m">${has?n:''}</td>${first?`<td rowspan="20" class="aj"><div>Saya berjanji akan menjaga buku teks dengan baik<br>dan mematuhi peraturan-peraturan SPBT yang ditetapkan</div></td>`:''}${'<td rowspan="2"></td>'.repeat(8)}</tr><tr>${low}</tr>`;
+      rows+=`<tr><td rowspan="2">${no}</td><td rowspan="2" class="nm">${has?esc(c.students[k]):''}</td>${marks}<td rowspan="2" class="m">${has?n:''}</td>${first?`<td rowspan="20" class="aj"><div>Saya berjanji akan menjaga buku teks dengan baik<br>dan mematuhi peraturan-peraturan SPBT yang ditetapkan</div></td>`:''}${has?sigCells(c,no):'<td rowspan="2"></td>'.repeat(8)}</tr><tr>${low}</tr>`;
     }
     rows+=`<tr class="jum"><td rowspan="2"></td><td rowspan="2" class="nm">Jumlah Naskhah</td>${tot.map(v=>`<td class="m">${v}</td>`).join('')}<td rowspan="2" class="m">${sum}</td><td colspan="9" rowspan="2" class="blk"></td></tr><tr class="jum">${c.books.map(()=>'<td class="m"></td>').join('')}</tr>`;
     const top=pg===0?`
@@ -365,6 +367,9 @@ function okFor(c,no,bi){ return !(c.lock&&c.lock.includes(bi)) || ((c.elig&&c.el
 function isCn(c,no){ return !!(c.cn&&c.cn.includes(no)); }
 function blockMsg(c,bi){ return (c.books[bi].toUpperCase().includes('CINA')?'Murid ini TIDAK mengambil Bahasa Cina':'Murid Bahasa Cina – tidak mengambil Bahasa Arab'); }
 const tak={};
+const tarikh={};
+function fmtD(i){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(i||''); return m?m[3]+'/'+m[2]+'/'+m[1]:''; }
+function todayIso(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 const BELL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 function takOf(cid,no){ const id=idAt(cid,no); return (tak[cid]&&tak[cid][id])||[]; }
 function setTak(cid,no,arr){ (tak[cid]=tak[cid]||{})[idAt(cid,no)]=arr; }
@@ -423,9 +428,10 @@ async function rpc(fn,args){
   try{ return JSON.parse(tx); }catch(e){ return null; }
 }
 function ingestRows(rows,cids){
-  cids.forEach(cid=>{ mem[cid]={}; tak[cid]={}; delete guru[cid]; delete roster[cid]; loaded[cid]=1; });
+  cids.forEach(cid=>{ mem[cid]={}; tak[cid]={}; delete guru[cid]; delete roster[cid]; delete tarikh[cid]; loaded[cid]=1; });
   rows.forEach(r=>{
     if(r.k==='_guru') guru[r.c]=(r.d&&r.d.guru)||'';
+    else if(r.k==='_tarikh') tarikh[r.c]={p:(r.d&&r.d.p)||'',r:(r.d&&r.d.r)||''};
     else if(r.k==='_senarai') roster[r.c]={tambah:(r.d&&r.d.tambah)||[],buang:(r.d&&r.d.buang)||[],buku:(r.d&&r.d.buku)||undefined,nama:(r.d&&r.d.nama)||undefined};
     else if(mem[r.c]){ mem[r.c][+r.k]=(r.d&&r.d.buku)||[]; if(r.d&&r.d.tak&&r.d.tak.length) tak[r.c][+r.k]=r.d.tak; }
   });
@@ -513,9 +519,21 @@ async function makeXlsx(c){
     M.cols.forEach((col,bi)=>{ let n=0; M.srows.forEach((sr,i)=>{ if(sr>prev&&sr<jr&&i<N&&got(i).has(bi)) n++; }); ws.num(ws.cell(col+jr),n); sub+=n; });
     ws.num(ws.cell(M.jn+jr),sub); prev=jr;
   });
-  zip.file(M.nl,xOut(nl.d)); zip.file(M.form,xOut(ws.d));
+
+  // tarikh & tandatangan
+  const T=tarikh[c.id]||{}, jc=colIdx(M.jn), L=k=>colName(jc+k), cPD=L(3), cGD=L(5), cRD=L(7), cHD=L(9);
+  M.srows.forEach((sr,i)=>{
+    if(i>=N) return;
+    if(T.p){ ws.str(ws.cell(cPD+sr),fmtD(T.p)); ws.str(ws.cell(cGD+sr),fmtD(T.p)); }
+    if(T.r){ ws.str(ws.cell(cRD+sr),fmtD(T.r)); ws.str(ws.cell(cHD+sr),fmtD(T.r)); }
+  });
+  zip.file(M.nl,xOut(nl.d));
+  zip.file(M.form,xOut(ws.d));
   return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
 }
+
+function colIdx(L){ let n=0; for(const ch of L) n=n*26+ch.charCodeAt(0)-64; return n-1; }
+function colName(i){ let s=''; i++; while(i>0){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=Math.floor((i-1)/26); } return s; }
 const XLSX_T='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const xname=c=>'SPBTG_2027_'+c.label.replace(/ /g,'_')+'.xlsx';
 async function downloadClassXlsx(c){
@@ -625,7 +643,7 @@ function klass(){
   { const s=stats(c), p=s.pc; h+=`<div class="stats"><div class="stat w"><b>${s.pc}%<span style="font:500 13px var(--fb);color:var(--mut)"> siap dikemas kini</span></b><div class="bar"><i style="width:${p}%"></i></div><span style="font-size:13px;color:var(--mut)">${s.bk} / ${s.B} mata pelajaran lengkap · ${s.n} murid dikemas kini</span></div><div class="stat"><b>${c.books.length}</b><span>tajuk buku</span></div><div class="stat"><b>${s.t}</b><span>buku diterima</span></div></div>`; }
   if(c.sementara) h+='<div class="banner" style="background:var(--g2);color:var(--g)">Senarai buku Tahun 1 mengikut senarai rasmi (BA/BT). Tambah nama murid dengan <b>+ Tambah murid</b>. Guna <b>Urus buku</b> hanya jika ada pembetulan.</div>';
   if(!N) h+='<div class="banner" style="background:var(--warnbg);color:var(--warn)">Belum ada murid. Tekan <b>+ Tambah murid</b> dan taip nama setiap murid (maksimum 40).</div>';
-  h+=nameBox(c)+teacherBox(c);
+  h+=nameBox(c)+teacherBox(c)+dateBox(c);
   h+=`<div class="toolbar"><button class="btn pri" id="bSave">Simpan</button><button class="btn" id="bPrint">Cetak</button><button class="btn" id="bXls">Muat turun borang (xlsx)</button><button class="btn" id="bAdd">+ Tambah murid</button>${c.sementara?'<button class="btn" id="bBk">Urus buku</button>':''}<span class="cnt">Tanda disimpan automatik; tekan Simpan untuk pastikan.</span></div>`;
   h+=`<div class="tabs">${[['buku','Ikut buku'],['murid','Ikut murid'],['jadual','Jadual'],['rumusan','Rumusan'+(takCount(c)?' ('+groupTak(c).length+')':'')]].map(([k,l])=>`<button data-t="${k}" class="${view.tab===k?'on':''}">${l}</button>`).join('')}</div>`;
   h+=addPanel(c); h+=bookPanel(c);
@@ -695,6 +713,25 @@ function teacherBox(c){
   const cur=curGuru(c), list=TEACHERS.slice(); if(cur && !list.includes(cur)) list.push(cur);
   return `<div class="gbox"><label for="gsel">Guru kelas</label><select id="gsel"><option value="">— pilih guru kelas —</option>${list.map(g=>`<option ${g===cur?'selected':''}>${g.replace(/&/g,'&amp;')}</option>`).join('')}<option value="__lain">Lain-lain (taip nama)…</option></select></div>`;
 }
+
+/* ---------- tarikh & tandatangan ---------- */
+async function saveMeta(c,key,data){
+  if(!db){ toast('Disimpan sementara sahaja (storan tiada)'); return; }
+  try{ await rpc('simpan',{p_kelas:c.id,p_kunci:key,p_data:data}); toast('Disimpan ✓'); }catch(e){ toast('Gagal simpan: '+errTxt(e)); console.error(e); }
+}
+function dateBox(c){
+  const T=tarikh[c.id]||{};
+  const row=(k,l)=>`<div class="tr"><label>${l}</label><input type="date" data-tk="${k}" value="${T[k]||''}"><button class="btn" data-tkn="${k}">Hari ini</button></div>`;
+  return `<div class="tbx"><div class="tt">Tarikh untuk borang</div>${row('p','Tarikh peminjaman')}${row('r','Tarikh pemulangan')}<p class="hn">Pilih sekali sahaja. Tarikh akan diisi untuk semua murid dalam borang cetak dan xlsx.</p></div>`;
+}
+function dateBinds(c){
+  app.querySelectorAll('[data-tk]').forEach(i=>i.onchange=()=>{ const T=tarikh[c.id]=Object.assign({p:'',r:''},tarikh[c.id]); T[i.dataset.tk]=i.value; saveMeta(c,'_tarikh',T); });
+  app.querySelectorAll('[data-tkn]').forEach(b=>b.onclick=()=>{ const T=tarikh[c.id]=Object.assign({p:'',r:''},tarikh[c.id]); T[b.dataset.tkn]=todayIso(); saveMeta(c,'_tarikh',T); render(); });
+}
+function sigCells(c,no){
+  const T=tarikh[c.id]||{}, d=i=>i?`<span style="font-size:6.4px">${fmtD(i)}</span>`:'';
+  return `<td rowspan="2"></td><td rowspan="2">${d(T.p)}</td><td rowspan="2"></td><td rowspan="2">${d(T.p)}</td><td rowspan="2"></td><td rowspan="2">${d(T.r)}</td><td rowspan="2"></td><td rowspan="2">${d(T.r)}</td>`;
+}
 function countBook(c,bi){ let n=0; for(let i=1;i<=c.students.length;i++) if(getRec(c.id,i).includes(bi)) n++; return n; }
 function byBook(c){
   const bi=view.book, N=c.students.length;
@@ -729,6 +766,7 @@ function saveGuru(c,name){
   rpc('simpan',{p_kelas:c.id,p_kunci:'_guru',p_data:{guru:name}}).then(()=>toast('Guru kelas disimpan ✓')).catch(e=>toast('Gagal simpan: '+errTxt(e)));
 }
 function bind(c){
+  dateBinds(c);
   { const cn=$('#cnm'); if(cn) cn.onchange=()=>{ const v=cn.value.replace(/\s+/g,' ').trim().toUpperCase(); if(v.length<2){ render(); return; } const s=roster[c.id]=roster[c.id]||{tambah:[],buang:[]}; s.nama=(v===c.base.label)?undefined:v; saveRoster(c); render(); }; }
   { const bb=$('#bBk'); if(bb) bb.onclick=()=>{ view.bk=!view.bk; render(); }; const bs=$('#bkSave'); if(bs){ bs.onclick=()=>{ if(saveBooks(c)){ view.bk=false; render(); } }; $('#bkClose').onclick=()=>{ view.bk=false; render(); }; } }
   $('#bAdd').onclick=()=>{ view.adding=!view.adding; render(); const i=$('#nn'); if(i) i.focus(); };
