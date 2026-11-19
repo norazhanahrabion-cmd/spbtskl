@@ -181,7 +181,8 @@ h2{font:700 14px var(--fd);margin:22px 0 8px;color:var(--mut)}
 .panel input[type=text]{font:inherit;font-size:16px;padding:11px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);text-transform:uppercase}
 .panel label.chk{display:flex;align-items:center;gap:8px;color:var(--ink);font-size:14.5px}
 .panel label.chk input{width:20px;height:20px}
-.tbx{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;display:grid;gap:10px}.tbx .tt{font:700 15px var(--fd)}.tbx .tr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tbx .tr label{min-width:150px;font-size:13px;font-weight:600;color:var(--mut)}.tbx input[type=date]{padding:9px 10px;font:600 15px var(--fb);border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.hn{font-size:13px;color:var(--mut);margin:0}.sgp{height:38px;max-width:140px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px}.btn[disabled]{opacity:.5;cursor:default}
+.tbx{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;display:grid;gap:10px}.xbx{margin:10px 0 4px;padding:10px;border:1px dashed var(--line);border-radius:12px}.xbx b{font-size:14px}.xr{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.xr label{min-width:92px;font-size:13px;font-weight:600;color:var(--mut)}.xr input{padding:8px 9px;font:600 14px var(--fb);border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.xr small{color:var(--mut);font-size:12px}.xr .btn{padding:8px 12px;font-size:13px}
+.tbx .tt{font:700 15px var(--fd)}.tbx .tr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.tbx .tr label{min-width:150px;font-size:13px;font-weight:600;color:var(--mut)}.tbx input[type=date]{padding:9px 10px;font:600 15px var(--fb);border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.hn{font-size:13px;color:var(--mut);margin:0}.sgp{height:38px;max-width:140px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:2px}.btn[disabled]{opacity:.5;cursor:default}
 .btn.dng{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
 .hide{display:none!important}
 </style>
@@ -369,6 +370,7 @@ function blockMsg(c,bi){ return (c.books[bi].toUpperCase().includes('CINA')?'Mur
 const tak={};
 const tarikh={};
 function fmtD(i){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(i||''); return m?m[3]+'/'+m[2]+'/'+m[1]:''; }
+function effDate(c,no,k){ const T=tarikh[c.id]||{}, o=((T.x||{})[idAt(c.id,no)]||{})[k]; if(o==='-') return ''; return o||T[k]||''; }
 function todayIso(){ const d=new Date(), p=n=>String(n).padStart(2,'0'); return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate()); }
 const BELL='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>';
 function takOf(cid,no){ const id=idAt(cid,no); return (tak[cid]&&tak[cid][id])||[]; }
@@ -431,7 +433,7 @@ function ingestRows(rows,cids){
   cids.forEach(cid=>{ mem[cid]={}; tak[cid]={}; delete guru[cid]; delete roster[cid]; delete tarikh[cid]; loaded[cid]=1; });
   rows.forEach(r=>{
     if(r.k==='_guru') guru[r.c]=(r.d&&r.d.guru)||'';
-    else if(r.k==='_tarikh') tarikh[r.c]={p:(r.d&&r.d.p)||'',r:(r.d&&r.d.r)||''};
+    else if(r.k==='_tarikh') tarikh[r.c]={p:(r.d&&r.d.p)||'',r:(r.d&&r.d.r)||'',x:(r.d&&r.d.x)||{}};
     else if(r.k==='_senarai') roster[r.c]={tambah:(r.d&&r.d.tambah)||[],buang:(r.d&&r.d.buang)||[],buku:(r.d&&r.d.buku)||undefined,nama:(r.d&&r.d.nama)||undefined};
     else if(mem[r.c]){ mem[r.c][+r.k]=(r.d&&r.d.buku)||[]; if(r.d&&r.d.tak&&r.d.tak.length) tak[r.c][+r.k]=r.d.tak; }
   });
@@ -524,8 +526,9 @@ async function makeXlsx(c){
   const T=tarikh[c.id]||{}, jc=colIdx(M.jn), L=k=>colName(jc+k), cPD=L(3), cGD=L(5), cRD=L(7), cHD=L(9);
   M.srows.forEach((sr,i)=>{
     if(i>=N) return;
-    if(T.p){ ws.str(ws.cell(cPD+sr),fmtD(T.p)); ws.str(ws.cell(cGD+sr),fmtD(T.p)); }
-    if(T.r){ ws.str(ws.cell(cRD+sr),fmtD(T.r)); ws.str(ws.cell(cHD+sr),fmtD(T.r)); }
+    const dp=effDate(c,i+1,'p'), dr=effDate(c,i+1,'r');
+    if(dp){ ws.str(ws.cell(cPD+sr),fmtD(dp)); ws.str(ws.cell(cGD+sr),fmtD(dp)); }
+    if(dr){ ws.str(ws.cell(cRD+sr),fmtD(dr)); ws.str(ws.cell(cHD+sr),fmtD(dr)); }
   });
   zip.file(M.nl,xOut(nl.d));
   zip.file(M.form,xOut(ws.d));
@@ -722,14 +725,18 @@ async function saveMeta(c,key,data){
 function dateBox(c){
   const T=tarikh[c.id]||{};
   const row=(k,l)=>`<div class="tr"><label>${l}</label><input type="date" data-tk="${k}" value="${T[k]||''}"><button class="btn" data-tkn="${k}">Hari ini</button></div>`;
-  return `<div class="tbx"><div class="tt">Tarikh untuk borang</div>${row('p','Tarikh peminjaman')}${row('r','Tarikh pemulangan')}<p class="hn">Pilih sekali sahaja. Tarikh akan diisi untuk semua murid dalam borang cetak dan xlsx.</p></div>`;
+  return `<div class="tbx"><div class="tt">Tarikh untuk borang</div>${row('p','Tarikh peminjaman')}${row('r','Tarikh pemulangan')}<p class="hn" style="color:var(--ink);font-weight:600">Nota: Untuk proses peminjaman buku teks, sila abaikan tarikh pemulangan di atas.</p><p class="hn">Pilih sekali sahaja. Tarikh akan diisi untuk semua murid dalam borang cetak dan xlsx.</p></div>`;
 }
 function dateBinds(c){
   app.querySelectorAll('[data-tk]').forEach(i=>i.onchange=()=>{ const T=tarikh[c.id]=Object.assign({p:'',r:''},tarikh[c.id]); T[i.dataset.tk]=i.value; saveMeta(c,'_tarikh',T); });
+  app.querySelectorAll('[data-xk]').forEach(i=>i.onchange=()=>{ xDate(c,+i.dataset.xn,i.dataset.xk,i.value); render(); });
+  app.querySelectorAll('[data-xr]').forEach(b=>b.onclick=()=>{ const no=+b.dataset.xr, k=b.dataset.xk; xDate(c,no,k,''); render(); });
+  app.querySelectorAll('[data-xb]').forEach(b=>b.onclick=()=>{ xDate(c,+b.dataset.xb,b.dataset.xk,'-'); render(); });
   app.querySelectorAll('[data-tkn]').forEach(b=>b.onclick=()=>{ const T=tarikh[c.id]=Object.assign({p:'',r:''},tarikh[c.id]); T[b.dataset.tkn]=todayIso(); saveMeta(c,'_tarikh',T); render(); });
 }
+function xDate(c,no,k,v){ const T=tarikh[c.id]=Object.assign({p:'',r:'',x:{}},tarikh[c.id]); T.x=T.x||{}; const id=idAt(c.id,no), o=T.x[id]=Object.assign({},T.x[id]); if(v) o[k]=v; else delete o[k]; if(!Object.keys(o).length) delete T.x[id]; saveMeta(c,'_tarikh',T); }
 function sigCells(c,no){
-  const T=tarikh[c.id]||{}, d=i=>i?`<span style="font-size:6.4px">${fmtD(i)}</span>`:'';
+  const T={p:effDate(c,no,'p'),r:effDate(c,no,'r')}, d=i=>i?`<span style="font-size:6.4px">${fmtD(i)}</span>`:'';
   return `<td rowspan="2"></td><td rowspan="2">${d(T.p)}</td><td rowspan="2"></td><td rowspan="2">${d(T.p)}</td><td rowspan="2"></td><td rowspan="2">${d(T.r)}</td><td rowspan="2"></td><td rowspan="2">${d(T.r)}</td>`;
 }
 function countBook(c,bi){ let n=0; for(let i=1;i<=c.students.length;i++) if(getRec(c.id,i).includes(bi)) n++; return n; }
@@ -748,6 +755,7 @@ function byStudent(c){
     h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.length}/${c.books.length}</span></div>`;
     if(open){
       h+='<div class="bd"><div class="toolbar" style="margin-top:10px">'+(view.del===no?'<span class="sp"></span><span class="cnt">Murid ini berpindah keluar? Buang daripada senarai dan borang?</span><button class="btn" data-dn="1">Batal</button><button class="btn dng" data-dy="'+no+'">Ya, buang</button>':'<button class="btn dng" data-dx="'+no+'">Buang – berpindah keluar</button><span style="display:flex;gap:8px;margin-left:auto"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button></span>')+'</div>';
+      { const xo=((tarikh[c.id]||{}).x||{})[idAt(c.id,no)]||{}, xr=(k,l)=>{ const o=xo[k], ef=effDate(c,no,k); return `<div class="xr"><label>${l}</label><input type="date" data-xk="${k}" data-xn="${no}" value="${ef}"><button class="btn" data-xr="${no}" data-xk="${k}">Ikut kelas</button><button class="btn" data-xb="${no}" data-xk="${k}">Kosong</button><small>${o==='-'?'dikosongkan':(o?'tarikh diubah':'ikut tarikh kelas')}</small></div>`; }; h+=`<div class="xbx"><b>Tarikh murid ini</b><p class="hn" style="margin:2px 0 6px">Ubah jika murid tidak hadir pada hari pinjaman atau pemulangan.</p>${xr('p','Tarikh pinjam')}${xr('r','Tarikh pulang')}</div>`; }
       c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
       h+='</div>';
     }
