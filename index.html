@@ -305,12 +305,13 @@ function classPrint(c){
     let rows='', tot=c.books.map(()=>0), sum=0;
     for(let k=pg*10;k<pg*10+10;k++){
       const no=k+1, has=k<N, r=has?getRec(c.id,no):[];
-      const marks=c.books.map((b,i)=>{ const on=has&&okFor(c,no,i)&&r.includes(i); if(on) tot[i]++; return `<td rowspan="2" class="m">${on?'/':''}</td>`; }).join('');
+      const marks=c.books.map((b,i)=>{ const on=has&&okFor(c,no,i)&&r.includes(i); if(on) tot[i]++; return `<td class="m">${on?'/':''}</td>`; }).join('');
+      const low=c.books.map(()=>'<td class="m"></td>').join('');
       const n=has?r.filter(i=>okFor(c,no,i)).length:0; sum+=n;
       const first=k===pg*10;
-      rows+=`<tr><td rowspan="2">${no}</td><td rowspan="2" class="nm">${has?esc(c.students[k]):''}</td>${marks}<td rowspan="2" class="m">${has?n:''}</td>${first?`<td rowspan="20" class="aj"><div>Saya berjanji akan menjaga buku teks dengan baik<br>dan mematuhi peraturan-peraturan SPBT yang ditetapkan</div></td>`:''}${'<td rowspan="2"></td>'.repeat(8)}</tr><tr></tr>`;
+      rows+=`<tr><td rowspan="2">${no}</td><td rowspan="2" class="nm">${has?esc(c.students[k]):''}</td>${marks}<td rowspan="2" class="m">${has?n:''}</td>${first?`<td rowspan="20" class="aj"><div>Saya berjanji akan menjaga buku teks dengan baik<br>dan mematuhi peraturan-peraturan SPBT yang ditetapkan</div></td>`:''}${'<td rowspan="2"></td>'.repeat(8)}</tr><tr>${low}</tr>`;
     }
-    rows+=`<tr class="jum"><td></td><td class="nm">Jumlah Naskhah</td>${tot.map(v=>`<td class="m">${v}</td>`).join('')}<td class="m">${sum}</td><td colspan="9" class="blk"></td></tr>`;
+    rows+=`<tr class="jum"><td rowspan="2"></td><td rowspan="2" class="nm">Jumlah Naskhah</td>${tot.map(v=>`<td class="m">${v}</td>`).join('')}<td rowspan="2" class="m">${sum}</td><td colspan="9" rowspan="2" class="blk"></td></tr><tr class="jum">${c.books.map(()=>'<td class="m"></td>').join('')}</tr>`;
     const top=pg===0?`
 <div class="ref">SPBT G PIN.1/2023 (MURID)</div>
 <div class="ctr"><div>KEMENTERIAN PENDIDIKAN MALAYSIA</div><div>BORANG REKOD PINJAMAN BUKU TEKS</div><div>SKIM PINJAMAN BUKU TEKS 2027</div></div>
@@ -340,7 +341,7 @@ table.f th.s{font-size:7px;height:11px}
 table.f tbody tr{height:${pgRow()/2}mm}
 table.f td.nm{text-align:left;padding:0 2px;font-size:7.6px;line-height:1.1}td.m{font-size:10px}
 td.aj{padding:0}td.aj div{writing-mode:vertical-rl;transform:rotate(180deg);margin:0 auto;font-size:7.2px;line-height:1.35;text-align:center;white-space:nowrap}
-tr.jum td{height:7mm;font-weight:400}td.blk{background:#000}
+tr.jum td{height:4.4mm;font-weight:400}td.blk{background:#000}
 .ft{display:flex;justify-content:space-between;margin-top:4px;font-size:8px}.pt{margin-left:42%}.mk{font-weight:700;font-style:italic}`;
   return `<!DOCTYPE html><html lang="ms"><head><meta charset="utf-8"><title>SPBT G 2027 ${esc(c.label)}</title><style>${css}.no-print{margin:6px;font:13px Arial}@media print{.no-print{display:none}}</style></head><body><div class="no-print"><button onclick="window.print()">Cetak</button></div>${pages}<script>window.addEventListener('load',function(){var H=195*96/25.4;document.querySelectorAll('.pg').forEach(function(p){var h=p.scrollHeight;if(h>H){p.style.zoom=(H/h*0.98).toFixed(3)}});setTimeout(function(){try{window.print()}catch(e){}},300)})<\/script></body></html>`;
 }
