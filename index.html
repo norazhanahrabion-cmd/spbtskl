@@ -159,7 +159,7 @@ function applyRoster(c){
   c.ids=ids; c.students=names; c.elig=elig; c.cn=cn;
 }
 CLASSES.forEach(applyRoster);
-function toast(t){ const s=$('#save'); s.textContent=t; s.classList.add('show'); clearTimeout(saveMsgT); saveMsgT=setTimeout(()=>s.classList.remove('show'),1400); }
+function toast(t){ const s=$('#save'); s.textContent=t; s.classList.add('show'); clearTimeout(saveMsgT); saveMsgT=setTimeout(()=>s.classList.remove('show'),/Gagal|tiada/i.test(t)?7000:1400); }
 const pending={};
 async function writeRec(key){
   const p=pending[key]; if(!p) return; delete pending[key];
@@ -361,7 +361,7 @@ function sheetOf(xml,sst){
 }
 async function makeXlsx(c){
   const M=XMETA[c.id]; if(!M) throw new Error('Tiada templat untuk '+c.id);
-  const res=await fetch('tpl/'+c.id+'.xlsx'); if(!res.ok) throw new Error('Templat tidak dijumpai');
+  const res=await fetch('tpl/'+c.id+'.xlsx'); if(!res.ok) throw new Error('templat tpl/'+c.id+'.xlsx tiada di laman (ralat '+res.status+')');
   const zip=await JSZip.loadAsync(await res.arrayBuffer());
   let sst=[]; const sf=zip.file('xl/sharedStrings.xml');
   if(sf){ const sd=xParse(await sf.async('string')); sst=Array.from(sd.getElementsByTagNameNS(XNS,'si')).map(si=>si.textContent); }
@@ -392,7 +392,7 @@ const xname=c=>'SPBTG_2027_'+c.label.replace(/ /g,'_')+'.xlsx';
 async function downloadClassXlsx(c){
   if(typeof JSZip==='undefined'){ toast('Pustaka ZIP tidak dimuatkan'); return; }
   try{ toast('Menyediakan borang…'); await saveNow(); const b=await makeXlsx(c); download(xname(c),b,XLSX_T); toast('Borang dimuat turun ✓'); }
-  catch(e){ console.error(e); toast('Gagal jana borang'); }
+  catch(e){ console.error(e); toast('Gagal jana borang: '+(e&&e.message||e)); }
 }
 async function downloadAllXlsx(){
   if(typeof JSZip==='undefined'){ toast('Pustaka ZIP tidak dimuatkan'); return; }
@@ -401,7 +401,7 @@ async function downloadAllXlsx(){
     for(const c of CLASSES){ if(!c.students.length||!XMETA[c.id]) continue; z.file(xname(c),await makeXlsx(c)); }
     const d=new Date(), p=n=>String(n).padStart(2,'0');
     download('SPBTG_2027_semua_'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'.zip',await z.generateAsync({type:'uint8array'}),'application/zip'); toast('ZIP dimuat turun ✓');
-  }catch(e){ console.error(e); toast('Gagal jana borang'); }
+  }catch(e){ console.error(e); toast('Gagal jana borang: '+(e&&e.message||e)); }
 }
 
 function exportJson(){
