@@ -379,18 +379,28 @@ function confirmDlg(title,html,okLabel,onOk){
   o.querySelector('#cfOk').onclick=()=>{ close(); onOk(); }; o.querySelector('#cfNo').onclick=close;
 }
 function flagTak(c,no,bi){
-  if(takHas(c.id,no,bi)){ untak(c.id,no,[bi]); persist(c.id,no); render(); return; }
-  confirmDlg('Sahkan: murid tidak dapat buku',`<b>${esc(c.students[no-1])}</b> (${esc(c.label)}) <b>TIDAK menerima</b><br>${esc(c.books[bi])}.<br><small style="color:var(--mut)">Notifikasi akan dipaparkan di muka depan kelas ini. Tekan Batal jika anda tersilap.</small>`,'Ya, tidak dapat',()=>{
-    const cur=new Set(getRec(c.id,no)); cur.delete(bi); setLocal(c.id,no,[...cur].sort((a,b)=>a-b));
-    const a=takOf(c.id,no).filter(e=>e.b!==bi); a.push({b:bi,n:c.books[bi],l:c.label,t:Date.now()}); setTak(c.id,no,a);
-    persist(c.id,no); render(); toast('Notifikasi dihantar ✓'); });
+  if(takHas(c.id,no,bi)){ untak(c.id,no,[bi]); persist(c.id,no); render(); toast('Tanda dibuang'); return; }
+  const cur=new Set(getRec(c.id,no)); cur.delete(bi); setLocal(c.id,no,[...cur].sort((a,b)=>a-b));
+  const a=takOf(c.id,no).filter(e=>e.b!==bi); a.push({b:bi,n:c.books[bi],l:c.label,t:Date.now()}); setTak(c.id,no,a);
+  persist(c.id,no); render(); toast('Tidak dapat: '+c.students[no-1].split(' ').slice(0,3).join(' ')+' ✓');
 }
+function groupTak(c){ const out=[]; c.students.forEach((nm,k)=>{ const a=takOf(c.id,k+1).slice().sort((x,y)=>x.b-y.b); if(a.length) out.push({no:k+1,nm,items:a,t:Math.max(...a.map(e=>e.t))}); }); return out; }
 function notePanel(c){
-  const items=[]; c.students.forEach((nm,k)=>takOf(c.id,k+1).forEach(e=>items.push({no:k+1,nm,...e})));
-  if(!items.length) return '';
-  items.sort((a,b)=>b.t-a.t);
-  return `<details class="note" open><summary>${BELL}<span><b>${items.length}</b> notifikasi: murid belum dapat buku</span></summary><div class="bd2">`+items.map(e=>`<div class="ni"><b>${e.no}. ${esc(e.nm)}</b><span>${esc(e.l||c.label)} · ${esc(e.n||c.books[e.b]||'')}</span><small>${ago(e.t)}</small><button data-nx="${e.no}:${e.b}">Buang tanda</button></div>`).join('')+'</div></details>';
+  const g=groupTak(c); if(!g.length) return '';
+  g.sort((a,b)=>b.t-a.t); const n=g.reduce((s,x)=>s+x.items.length,0);
+  return `<details class="note" open><summary>${BELL}<span><b>${g.length}</b> murid belum dapat buku (${n} buku)</span></summary><div class="bd2">`+g.map(x=>`<div class="ni"><b>${x.no}. ${esc(x.nm)}</b><small>${ago(x.t)}</small>${x.items.map(e=>`<span style="flex:1 1 100%;display:flex;gap:8px;align-items:center;color:var(--ink)"><span style="flex:1;min-width:0">• ${esc(e.n||c.books[e.b]||'')}</span><button data-nx="${x.no}:${e.b}">Buang tanda</button></span>`).join('')}</div>`).join('')+'</div></details>';
 }
+function rumusanKelas(c){
+  const g=groupTak(c);
+  if(!g.length) return '<div class="banner" style="background:var(--g2);color:var(--g)">Tiada murid ditanda <b>tidak dapat buku</b> di kelas ini.</div>';
+  let h=`<div class="toolbar"><span class="cnt"><b>${g.length}</b> murid · <b>${g.reduce((s,x)=>s+x.items.length,0)}</b> buku belum dapat</span><span class="sp"></span><button class="btn" id="bRCsv">CSV</button><button class="btn" id="bRPrint">Cetak</button></div>`;
+  h+='<h2 class="yr" style="margin-top:8px">Ikut murid</h2>'+g.map(x=>`<div class="card open"><div class="hd"><span class="no">${x.no}</span><span class="nm">${esc(x.nm)}</span><span class="pill">${x.items.length}</span></div><div class="bd"><ul style="margin:6px 0 4px;padding-left:20px">${x.items.map(e=>`<li>${esc(e.n||c.books[e.b]||'')}</li>`).join('')}</ul></div></div>`).join('');
+  const byB={}; g.forEach(x=>x.items.forEach(e=>{ const k=e.n||c.books[e.b]||''; (byB[k]=byB[k]||[]).push(x.nm); }));
+  h+='<h2 class="yr" style="margin-top:18px">Ikut buku</h2>'+Object.keys(byB).sort().map(k=>`<div class="card open"><div class="hd"><span class="nm">${esc(k)}</span><span class="pill">${byB[k].length}</span></div><div class="bd"><ul style="margin:6px 0 4px;padding-left:20px">${byB[k].map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div></div>`).join('');
+  return h;
+}
+function rumusanCsv(c){ const q=s=>'"'+String(s).replace(/"/g,'""')+'"'; return '\ufeffBil,Murid,Kelas,Buku belum dapat\n'+groupTak(c).map(x=>q(x.no)+','+q(x.nm)+','+q(c.label)+','+q(x.items.map(e=>e.n||c.books[e.b]||'').join('; '))).join('\n'); }
+function rumusanPrint(c){ const g=groupTak(c); return printDoc('Murid belum dapat buku – '+c.label,`<h2 style="margin:0 0 6px">Murid belum dapat buku – ${esc(c.label)}</h2><p style="margin:0 0 8px">Guru kelas: ${esc(curGuru(c)||'-')}</p><table style="width:100%;border-collapse:collapse"><tr><th style="border:1px solid #000;padding:4px;width:30px">Bil</th><th style="border:1px solid #000;padding:4px;text-align:left">Nama murid</th><th style="border:1px solid #000;padding:4px;text-align:left">Buku belum dapat</th></tr>${g.map(x=>`<tr><td style="border:1px solid #000;padding:4px;text-align:center">${x.no}</td><td style="border:1px solid #000;padding:4px">${esc(x.nm)}</td><td style="border:1px solid #000;padding:4px">${x.items.map(e=>esc(e.n||c.books[e.b]||'')).join('<br>')}</td></tr>`).join('')}</table>`,false); }
 function allNotes(){ const out=[]; CLASSES.forEach(c=>{ if(!loaded[c.id]) return; c.students.forEach((nm,k)=>takOf(c.id,k+1).forEach(e=>out.push({c,nm,no:k+1,...e}))); }); return out.sort((a,b)=>b.t-a.t); }
 function toggle(cid,no,bi,force){
   const _c=CLASSES.find(x=>x.id===cid); if(!okFor(_c,no,bi)){ toast(blockMsg(_c,bi)); return; }
@@ -588,9 +598,9 @@ function klass(){
   if(!N) h+='<div class="banner" style="background:var(--warnbg);color:var(--warn)">Belum ada murid. Tekan <b>+ Tambah murid</b> dan taip nama setiap murid (maksimum 40).</div>';
   h+=nameBox(c)+teacherBox(c);
   h+=`<div class="toolbar"><button class="btn pri" id="bSave">Simpan</button><button class="btn" id="bPrint">Cetak</button><button class="btn" id="bXls">Muat turun borang (xlsx)</button><button class="btn" id="bAdd">+ Tambah murid</button>${c.sementara?'<button class="btn" id="bBk">Urus buku</button>':''}<span class="cnt">Tanda disimpan automatik; tekan Simpan untuk pastikan.</span></div>`;
-  h+=`<div class="tabs">${[['buku','Ikut buku'],['murid','Ikut murid'],['jadual','Jadual']].map(([k,l])=>`<button data-t="${k}" class="${view.tab===k?'on':''}">${l}</button>`).join('')}</div>`;
+  h+=`<div class="tabs">${[['buku','Ikut buku'],['murid','Ikut murid'],['jadual','Jadual'],['rumusan','Rumusan'+(takCount(c)?' ('+groupTak(c).length+')':'')]].map(([k,l])=>`<button data-t="${k}" class="${view.tab===k?'on':''}">${l}</button>`).join('')}</div>`;
   h+=addPanel(c); h+=bookPanel(c);
-  if(view.tab==='buku') h+=byBook(c); else if(view.tab==='murid') h+=byStudent(c); else h+=matrix(c);
+  if(view.tab==='buku') h+=byBook(c); else if(view.tab==='murid') h+=byStudent(c); else if(view.tab==='rumusan') h+=rumusanKelas(c); else h+=matrix(c);
   h+=removedPanel(c);
   app.innerHTML=h;
   app.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{view.tab=b.dataset.t;render()});
@@ -708,6 +718,7 @@ function bind(c){
   app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{view.book=+b.dataset.b;render()});
   app.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{ const on=b.dataset.all==='1'; const run=()=>{ for(let i=1;i<=N;i++){ if(okFor(c,i,view.book)) toggle(c.id,i,view.book,on); if(!on) untak(c.id,i,[view.book]); } render(); }; if(on) run(); else confirmDlg('Kosongkan tanda?',`Semua tanda untuk <b>${esc(c.books[view.book])}</b> di ${esc(c.label)} akan dikosongkan.`,'Ya, kosongkan',run); });
   app.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const [n,i]=b.dataset.x.split(':').map(Number); flagTak(c,n,i); });
+  { const rc=$('#bRCsv'); if(rc) rc.onclick=()=>offer('Murid_belum_dapat_buku_'+c.label.replace(/ /g,'_')+'.csv',rumusanCsv(c)); const rp=$('#bRPrint'); if(rp) rp.onclick=()=>openPrint('Murid_belum_dapat_buku_'+c.label.replace(/ /g,'_')+'.html',rumusanPrint(c)); }
   app.querySelectorAll('[data-nx]').forEach(b=>b.onclick=()=>{ const [n,i]=b.dataset.nx.split(':').map(Number); untak(c.id,n,[i]); persist(c.id,n); render(); });
   app.querySelectorAll('.row[data-s]').forEach(r=>r.onclick=()=>{ toggle(c.id,+r.dataset.s,view.book); render(); });
   app.querySelectorAll('[data-o]').forEach(r=>r.onclick=()=>{ const n=+r.dataset.o; view.open=view.open===n?null:n; render(); });
