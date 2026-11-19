@@ -568,7 +568,7 @@ function missedList(c){
 let _ac;
 function chime(){
   if(store.get('spbtg_bunyi')==='mati') return;
-  try{ _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const ac=_ac; if(ac.state==='suspended') ac.resume(); const now=ac.currentTime, vol=store.get('spbtg_bunyi')==='perlahan'?0.035:0.13;
+  try{ _ac=_ac||new (window.AudioContext||window.webkitAudioContext)(); const ac=_ac; if(ac.state==='suspended') ac.resume(); const now=ac.currentTime, vol=store.get('spbtg_bunyi')==='perlahan'?0.012:0.06;
     [[659.25,0],[783.99,.17],[987.77,.34]].forEach(([f,d])=>{ const o=ac.createOscillator(), g=ac.createGain(); o.type='sine'; o.frequency.value=f; o.connect(g); g.connect(ac.destination);
       g.gain.setValueAtTime(0.0001,now+d); g.gain.exponentialRampToValueAtTime(vol,now+d+0.03); g.gain.exponentialRampToValueAtTime(0.0001,now+d+0.75); o.start(now+d); o.stop(now+d+0.8); });
   }catch(e){}
