@@ -314,7 +314,8 @@ const store={ get(k){ try{return localStorage.getItem(k)||'';}catch(e){return ''
 async function rpc(fn,args){
   const r=await fetch(SB.url.replace(/\/$/,'')+'/rest/v1/rpc/'+fn,{method:'POST',headers:{'Content-Type':'application/json',apikey:SB.key,Authorization:'Bearer '+SB.key},body:JSON.stringify(args||{})});
   if(!r.ok){ const e=new Error(fn+' '+r.status); e.status=r.status; e.body=await r.text(); throw e; }
-  return r.json();
+  const tx=await r.text(); if(!tx) return null;
+  try{ return JSON.parse(tx); }catch(e){ return null; }
 }
 function ingestRows(rows,cids){
   cids.forEach(cid=>{ mem[cid]={}; delete guru[cid]; delete roster[cid]; loaded[cid]=1; });
