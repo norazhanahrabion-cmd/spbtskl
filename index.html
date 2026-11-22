@@ -658,6 +658,7 @@ function klass(){
   const ch=app.querySelector('.chips'); if(ch){ ch.scrollLeft=_cl; const on=ch.querySelector('.chip.on'); if(on){ const a=on.offsetLeft, b=a+on.offsetWidth; if(a<ch.scrollLeft||b>ch.scrollLeft+ch.clientWidth) ch.scrollLeft=a-12; } }
   const tw=app.querySelector('.tw'); if(tw){ tw.scrollLeft=_tx; tw.scrollTop=_ty; }
   window.scrollTo(0,_sy);
+  if(view.jump){ view.jump=0; const t=app.querySelector('.chips + .toolbar'); if(t){ const hd=document.querySelector('header'); const off=(hd?hd.getBoundingClientRect().height:0)+8; window.scrollTo({top:t.getBoundingClientRect().top+window.scrollY-off,behavior:'smooth'}); } }
 }
 async function saveRoster(c){
   const s=roster[c.id]||{tambah:[],buang:[]};
@@ -790,7 +791,7 @@ function bind(c){
     saveGuru(c,v.trim()); render();
   };
   const N=c.students.length, all=Array.from({length:c.books.length},(_,i)=>i);
-  app.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{view.book=+b.dataset.b;render()});
+  app.querySelectorAll('.chip[data-b]').forEach(b=>b.onclick=()=>{view.book=+b.dataset.b;view.jump=1;render()});
   app.querySelectorAll('[data-all]').forEach(b=>b.onclick=()=>{ const on=b.dataset.all==='1'; const run=()=>{ for(let i=1;i<=N;i++){ if(okFor(c,i,view.book)) toggle(c.id,i,view.book,on); if(!on) untak(c.id,i,[view.book]); } render(); }; if(on) run(); else confirmDlg('Kosongkan tanda?',`Semua tanda untuk <b>${esc(c.books[view.book])}</b> di ${esc(c.label)} akan dikosongkan.`,'Ya, kosongkan',run); });
   app.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); const [n,i]=b.dataset.x.split(':').map(Number); flagTak(c,n,i); });
   { const rc=$('#bRCsv'); if(rc) rc.onclick=()=>offer('Murid_belum_dapat_buku_'+c.label.replace(/ /g,'_')+'.csv',rumusanCsv(c)); const rp=$('#bRPrint'); if(rp) rp.onclick=()=>openPrint('Murid_belum_dapat_buku_'+c.label.replace(/ /g,'_')+'.html',rumusanPrint(c)); }
