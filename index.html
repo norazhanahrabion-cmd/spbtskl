@@ -809,6 +809,24 @@ function recvOf(c,bi){ let n=0; for(let i=0;i<c.students.length;i++){ if((c.elig
 function shortRows(){ // satu baris bagi setiap kelas + subjek
   const out=[]; for(const c of CLASSES){ if(!c.students.length) continue; c.books.forEach((b,bi)=>{ const need=needOf(c,bi), got=recvOf(c,bi); out.push({c,b,need,got,kurang:Math.max(0,need-got)}); }); } return out;
 }
+function overallRows(){
+  const m=new Map();
+  for(const r of shortRows()){ const k=r.c.year+'|'+r.b; const o=m.get(k)||{y:r.c.year,b:r.b,need:0,got:0,kurang:0}; o.need+=r.need; o.got+=r.got; o.kurang+=r.kurang; m.set(k,o); }
+  return [...m.values()].sort((a,b)=>a.y-b.y);
+}
+function overallCsv(){
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"', rows=overallRows(); let T=[0,0,0];
+  const lines=rows.map(r=>{ T[0]+=r.need; T[1]+=r.got; T[2]+=r.kurang; return [r.y,q(r.b),r.need,r.got,r.kurang].join(','); });
+  lines.push(['Jumlah',q('Semua tahun'),T[0],T[1],T[2]].join(','));
+  return '﻿Tahun,Subjek / buku,Perlu,Diterima,Kurang\n'+lines.join('\n');
+}
+function overallPrint(){
+  const rows=overallRows(), years=[...new Set(rows.map(r=>r.y))]; let body='<h1>Kekurangan Buku Teks 2027 - Keseluruhan Sekolah</h1><p class="sub">SK Langkawi · Kurang = murid yang perlu buku tetapi belum menerima · '+new Date().toLocaleDateString('ms-MY')+'</p>', G=0;
+  for(const y of years){ const rs=rows.filter(r=>r.y===y); const k=rs.reduce((s,r)=>s+r.kurang,0); G+=k;
+    body+=`<h2>Tahun ${y}</h2><table><thead><tr><th class="l">Subjek / buku</th><th>Perlu</th><th>Diterima</th><th>Kurang</th></tr></thead><tbody>${rs.map(r=>`<tr><td class="l">${esc(r.b)}</td><td>${r.need}</td><td>${r.got}</td><td class="${r.kurang?'bad':''}">${r.kurang}</td></tr>`).join('')}<tr><th class="l">Jumlah kurang Tahun ${y}</th><th></th><th></th><th>${k}</th></tr></tbody></table>`; }
+  body+=`<h2>Jumlah keseluruhan kurang: ${G} buku</h2>`;
+  return printDoc('Kekurangan buku keseluruhan 2027',body,false);
+}
 function sum(){
   $('#title').innerHTML='Ringkasan<small>Kemajuan &amp; kekurangan buku</small>';
   const tab=view.stab||'progress';
@@ -825,7 +843,12 @@ function sum(){
     const years=[...new Set(CLASSES.filter(c=>c.students.length).map(c=>c.year))];
     const y=view.syear||years[0];
     h+='<p style="margin:0 0 10px;color:var(--mut);font-size:14px">Kurang = murid yang perlu buku itu tetapi belum ditanda sebagai menerima. Murid yang tidak mengambil subjek (contoh Bahasa Cina/Arab) tidak dikira, berdasarkan borang 2026.</p>';
-    h+='<div class="toolbar"><button class="btn pri" id="sSave">Simpan (CSV)</button><button class="btn" id="sPrint">Cetak</button></div>';
+    { const rows=overallRows(), tot=rows.reduce((s,r)=>s+r.kurang,0), yrs=[...new Set(rows.map(r=>r.y))];
+      h+=`<h2 style="margin-top:4px">Keseluruhan sekolah</h2><p style="margin:0 0 8px;color:var(--mut);font-size:14px">Jumlah buku yang masih kurang bagi semua kelas: <b style="color:${tot?'var(--warn)':'var(--g)'}">${tot}</b>. Jadual di bawah hanya menunjukkan buku yang masih kurang; fail muat turun memuatkan semua buku.</p>`;
+      h+='<div class="toolbar"><button class="btn pri" id="oSave">Muat turun keseluruhan (CSV)</button><button class="btn" id="oPrint">Cetak keseluruhan</button></div>';
+      if(tot){ h+='<div class="tw" style="max-height:none"><table class="sum"><thead><tr><th>Tahun</th><th>Subjek / buku</th><th style="text-align:center">Perlu</th><th style="text-align:center">Diterima</th><th style="text-align:center">Kurang</th></tr></thead><tbody>'+rows.filter(r=>r.kurang>0).map(r=>`<tr><td>${r.y}</td><td>${esc(r.b)}</td><td style="text-align:center">${r.need}</td><td style="text-align:center">${r.got}</td><td style="text-align:center;color:var(--warn);font-weight:700">${r.kurang}</td></tr>`).join('')+`<tr><th colspan="4">Jumlah kurang</th><th style="text-align:center">${tot}</th></tr></tbody></table></div>`; }
+      h+='<h2>Ikut tahun dan kelas</h2>'; }
+    h+='<div class="toolbar"><button class="btn pri" id="sSave">Simpan terperinci (CSV)</button><button class="btn" id="sPrint">Cetak</button></div>';
     h+='<div class="chips">'+years.map(v=>`<button class="chip ${v===y?'on':''}" data-sy="${v}">Tahun ${v}</button>`).join('')+'</div>';
     const cs=CLASSES.filter(c=>c.year===y&&c.students.length);
     const titles=[]; cs.forEach(c=>c.books.forEach(b=>{ if(!titles.includes(b)) titles.push(b); }));
@@ -847,6 +870,8 @@ function sum(){
   app.querySelectorAll('[data-sy]').forEach(b=>b.onclick=()=>{view.syear=+b.dataset.sy;render()});
   const ba=$('#bAll'); if(ba) ba.onclick=downloadAllXlsx;
   const bn=$('#bNcsv'); if(bn) bn.onclick=()=>{ const q=s=>'"'+String(s).replace(/"/g,'""')+'"'; offer('murid_tidak_dapat_buku.csv','\ufeffMurid,Kelas,Buku,Masa\n'+allNotes().map(e=>[e.nm,e.c.label,e.n||e.c.books[e.b]||'',new Date(e.t).toLocaleString('ms-MY')].map(q).join(',')).join('\n')); };
+  const os=$('#oSave'); if(os) os.onclick=()=>offer('Kekurangan_buku_keseluruhan_2027.csv',overallCsv());
+  const op=$('#oPrint'); if(op) op.onclick=()=>openPrint('Kekurangan_buku_keseluruhan_2027_cetak.html',overallPrint());
   const ss=$('#sSave'); if(ss) ss.onclick=()=>offer('Rumusan_kekurangan_buku_2027.csv','\ufeff'+$('#csv').value);
   const sp=$('#sPrint'); if(sp) sp.onclick=()=>openPrint('Rumusan_kekurangan_buku_2027_cetak.html',shortPrint());
   const cp=$('#cpy'); if(cp) cp.onclick=async()=>{ const ta=$('#csv'); ta.select(); try{ await navigator.clipboard.writeText(ta.value); $('#cpyMsg').textContent='Disalin ✓'; }catch(e){ $('#cpyMsg').textContent='Tekan lama pada kotak untuk salin'; } };
