@@ -214,6 +214,8 @@ function getRec(cid,no){ const id=idAt(cid,no); return (mem[cid]&&mem[cid][id]) 
 function setLocal(cid,no,arr){ (mem[cid]=mem[cid]||{})[idAt(cid,no)]=arr; }
 let roster={};
 CLASSES.forEach(c=>{ if(c.students.length||c.books.length){ c.base={label:c.label,books:c.books.slice(),students:c.students.slice(),elig:(c.elig||[]).slice(),cn:(c.cn||[]).slice()}; } });
+function isMoral(b){ return /MORAL/i.test(String(b||'')); }
+function hid(c,b){ return isMoral(b) || (/BAHASA CINA/i.test(String(b||'')) && !(c.cn&&c.cn.length) && c.students.length>0); }
 function applyRoster(c){
   if(!c.base) return; const s=roster[c.id]||{tambah:[],buang:[]}, gone=new Set(s.buang||[]);
   c.label=s.nama||c.base.label;
@@ -223,6 +225,7 @@ function applyRoster(c){
   (s.tambah||[]).forEach(a=>{ if(gone.has(a.id)) return; ids.push(a.id); names.push(a.nama);
     elig.push(c.books.map((b,bi)=>{ if(!(c.lock||[]).includes(bi)) return '1'; const u=b.toUpperCase(); return u.includes('BAHASA CINA')?(a.cn?'1':'0'):(a.cn?'0':'1'); }).join(''));
     if(a.cn) cn.push(ids.length); });
+  c.lock=c.lock||[]; c.books.forEach((b,bi)=>{ if(isMoral(b)){ if(!c.lock.includes(bi)) c.lock.push(bi); for(let k=0;k<elig.length;k++){ const e=(elig[k]||'1'.repeat(c.books.length)).split(''); e[bi]='0'; elig[k]=e.join(''); } } });
   c.ids=ids; c.students=names; c.elig=elig; c.cn=cn;
 }
 CLASSES.forEach(applyRoster);
@@ -354,7 +357,7 @@ function pgRow(){ return 9.2; }
 function shortTables(){
   const years=[...new Set(CLASSES.filter(c=>c.students.length).map(c=>c.year))]; let out=[];
   for(const y of years){
-    const cs=CLASSES.filter(c=>c.year===y&&c.students.length), titles=[]; cs.forEach(c=>c.books.forEach(b=>{ if(!titles.includes(b)) titles.push(b); }));
+    const cs=CLASSES.filter(c=>c.year===y&&c.students.length), titles=[]; cs.forEach(c=>c.books.forEach(b=>{ if(!hid(c,b)&&!titles.includes(b)) titles.push(b); }));
     const colTot=cs.map(()=>0); let grand=0, rows='';
     for(const tt of titles){ let rt=0, cells=''; cs.forEach((c,ci)=>{ const bi=c.books.indexOf(tt); if(bi<0){cells+='<td>-</td>';return;} const need=needOf(c,bi),got=recvOf(c,bi),k=Math.max(0,need-got); rt+=k; colTot[ci]+=k; cells+=`<td class="${k>0?'bad':''}">${need===0?'-':k}</td>`; }); grand+=rt; rows+=`<tr><td class="l">${esc(tt)}</td>${cells}<td class="bad">${rt}</td></tr>`; }
     out.push(`<h2>Tahun ${y}</h2><table><thead><tr><th class="l">Subjek / buku</th>${cs.map(c=>`<th>${c.label}</th>`).join('')}<th>Jumlah</th></tr></thead><tbody>${rows}<tr><th class="l">Jumlah kurang</th>${colTot.map(v=>`<th>${v}</th>`).join('')}<th>${grand}</th></tr></tbody></table>`);
@@ -640,7 +643,7 @@ function home(){
 function klass(){
   const _sy=window.scrollY, _ch=app.querySelector('.chips'), _cl=_ch?_ch.scrollLeft:0, _tw=app.querySelector('.tw'), _tx=_tw?_tw.scrollLeft:0, _ty=_tw?_tw.scrollTop:0;
   const c=CLASSES.find(x=>x.id===view.id), N=c.students.length;
-  $('#title').innerHTML=`${c.label}<small>${N} murid · ${c.books.length} tajuk buku · ${c.year===1?'murid baharu Tahun 1':'naik dari '+c.from_label}</small>`;
+  $('#title').innerHTML=`${c.label}<small>${N} murid · ${c.books.filter(x=>!hid(c,x)).length} tajuk buku · ${c.year===1?'murid baharu Tahun 1':'naik dari '+c.from_label}</small>`;
   let h='';
   if(!db) h+='<div class="banner">Pangkalan data belum disambung – perubahan tidak disimpan.</div>';
   h+=notePanel(c);
@@ -744,7 +747,7 @@ function sigCells(c,no){
 function countBook(c,bi){ let n=0; for(let i=1;i<=c.students.length;i++) if(getRec(c.id,i).includes(bi)) n++; return n; }
 function byBook(c){
   const bi=view.book, N=c.students.length;
-  let h='<div class="chips">'+c.books.map((b,i)=>`<button class="chip ${i===bi?'on':''}" data-b="${i}">${b}<small>${countBook(c,i)}</small></button>`).join('')+'</div>';
+  let h='<div class="chips">'+c.books.map((b,i)=>hid(c,b)?'':`<button class="chip ${i===bi?'on':''}" data-b="${i}">${b}<small>${countBook(c,i)}</small></button>`).join('')+'</div>';
   h+=`<div class="toolbar"><span class="cnt"><b>${countBook(c,bi)}</b> / ${N} murid menerima</span><span class="sp"></span><button class="btn" data-all="1">Tanda semua</button><button class="btn" data-all="0">Kosongkan</button></div>`;
   if(c.lock&&c.lock.includes(bi)) h+=`<div class="banner" style="background:var(--g2);color:var(--g)">${c.books[bi].toUpperCase().includes('CINA')?'Hanya murid bertanda <b>BAHASA CINA</b> mengambil buku ini ('+(c.cn||[]).length+' murid). Murid lain dikunci.':'Murid <b>BAHASA CINA</b> tidak mengambil buku ini. Mereka dikunci.'}</div>`;
   c.students.forEach((nm,k)=>{ const ok=okFor(c,k+1,bi), tk=ok&&takHas(c.id,k+1,bi), on=ok&&!tk&&getRec(c.id,k+1).includes(bi); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-s="${k+1}"><span class="no">${k+1}</span><span class="nm">${nm}${isCn(c,k+1)?' <span class="cn">Bahasa Cina</span>':''}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+(k+1)+':'+bi+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
@@ -754,11 +757,11 @@ function byStudent(c){
   let h='<p style="color:var(--mut);font-size:14px;margin:4px 2px 10px">Murid berpindah keluar? Tekan nama murid, kemudian <b>Buang – berpindah keluar</b>. Boleh dipulihkan di bahagian bawah.</p>';
   c.students.forEach((nm,k)=>{
     const no=k+1, r=getRec(c.id,no), open=view.open===no;
-    h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.length}/${c.books.length}</span></div>`;
+    h+=`<div class="card ${open?'open':''}"><div class="hd" data-o="${no}"><span class="no">${no}</span><span class="nm">${nm}${isCn(c,no)?' <span class="cn">Bahasa Cina</span>':''}</span><span class="pill">${r.filter(x=>!hid(c,c.books[x])).length}/${c.books.filter(x=>!hid(c,x)).length}</span></div>`;
     if(open){
       h+='<div class="bd"><div class="toolbar" style="margin-top:10px">'+(view.del===no?'<span class="sp"></span><span class="cnt">Murid ini berpindah keluar? Buang daripada senarai dan borang?</span><button class="btn" data-dn="1">Batal</button><button class="btn dng" data-dy="'+no+'">Ya, buang</button>':'<button class="btn dng" data-dx="'+no+'">Buang – berpindah keluar</button><span style="display:flex;gap:8px;margin-left:auto"><button class="btn" data-sa="'+no+'">Tanda semua</button><button class="btn" data-sc="'+no+'">Kosongkan</button></span>')+'</div>';
       { const xo=((tarikh[c.id]||{}).x||{})[idAt(c.id,no)]||{}, xr=(k,l)=>{ const o=xo[k], ef=effDate(c,no,k); return `<div class="xr"><label>${l}</label><input type="date" data-xk="${k}" data-xn="${no}" value="${ef}"><button class="btn" data-xr="${no}" data-xk="${k}">Ikut kelas</button><button class="btn" data-xb="${no}" data-xk="${k}">Kosong</button><small>${o==='-'?'dikosongkan':(o?'tarikh diubah':'ikut tarikh kelas')}</small></div>`; }; h+=`<div class="xbx"><b>Tarikh murid ini</b><p class="hn" style="margin:2px 0 6px">Ubah jika murid tidak hadir pada hari pinjaman atau pemulangan.</p>${xr('p','Tarikh pinjam')}${xr('r','Tarikh pulang')}</div>`; }
-      c.books.forEach((b,i)=>{ const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
+      c.books.forEach((b,i)=>{ if(hid(c,b)) return; const ok=okFor(c,no,i), tk=ok&&takHas(c.id,no,i), on=ok&&!tk&&r.includes(i); h+=`<div class="row ${on?'on':''} ${tk?'tak':''} ${ok?'':'lock'}" data-sb="${no}:${i}"><span class="nm">${b}</span>${ok?'<span class="box">'+(tk?'✗':'✓')+'</span><span class="xb" data-x="'+no+':'+i+'">'+(tk?'Buang tanda':'Tak dapat')+'</span>':'<span class="nb">tidak ambil</span>'}</div>`; });
       h+='</div>';
     }
     h+='</div>';
@@ -766,8 +769,8 @@ function byStudent(c){
   return h;
 }
 function matrix(c){
-  let h='<div class="tw"><table><thead><tr><th class="n">Nama murid</th>'+c.books.map(b=>`<th><div>${b}</div></th>`).join('')+'</tr></thead><tbody>';
-  c.students.forEach((nm,k)=>{ const r=getRec(c.id,k+1); h+=`<tr><td class="n">${k+1}. ${nm}${isCn(c,k+1)?' <span class="cn">BC</span>':''}</td>`+c.books.map((b,i)=>okFor(c,k+1,i)?`<td class="cell ${takHas(c.id,k+1,i)?'takc':(r.includes(i)?'on':'')}" data-m="${k+1}:${i}">${takHas(c.id,k+1,i)?'✗':'✓'}</td>`:`<td class="cell lockc" data-m="${k+1}:${i}">×</td>`).join('')+'</tr>'; });
+  let h='<div class="tw"><table><thead><tr><th class="n">Nama murid</th>'+c.books.map(b=>hid(c,b)?'':`<th><div>${b}</div></th>`).join('')+'</tr></thead><tbody>';
+  c.students.forEach((nm,k)=>{ const r=getRec(c.id,k+1); h+=`<tr><td class="n">${k+1}. ${nm}${isCn(c,k+1)?' <span class="cn">BC</span>':''}</td>`+c.books.map((b,i)=>hid(c,b)?'':okFor(c,k+1,i)?`<td class="cell ${takHas(c.id,k+1,i)?'takc':(r.includes(i)?'on':'')}" data-m="${k+1}:${i}">${takHas(c.id,k+1,i)?'✗':'✓'}</td>`:`<td class="cell lockc" data-m="${k+1}:${i}">×</td>`).join('')+'</tr>'; });
   return h+'</tbody></table></div>';
 }
 function saveGuru(c,name){
@@ -807,7 +810,7 @@ function bind(c){
 function needOf(c,bi){ let n=0; for(let i=0;i<c.students.length;i++) if((c.elig&&c.elig[i]?c.elig[i][bi]:'1')==='1') n++; return n; }
 function recvOf(c,bi){ let n=0; for(let i=0;i<c.students.length;i++){ if((c.elig&&c.elig[i]?c.elig[i][bi]:'1')!=='1') continue; if(getRec(c.id,i+1).includes(bi)) n++; } return n; }
 function shortRows(){ // satu baris bagi setiap kelas + subjek
-  const out=[]; for(const c of CLASSES){ if(!c.students.length) continue; c.books.forEach((b,bi)=>{ const need=needOf(c,bi), got=recvOf(c,bi); out.push({c,b,need,got,kurang:Math.max(0,need-got)}); }); } return out;
+  const out=[]; for(const c of CLASSES){ if(!c.students.length) continue; c.books.forEach((b,bi)=>{ if(hid(c,b)) return; const need=needOf(c,bi), got=recvOf(c,bi); out.push({c,b,need,got,kurang:Math.max(0,need-got)}); }); } return out;
 }
 function overallRows(){
   const m=new Map();
@@ -851,7 +854,7 @@ function sum(){
     h+='<div class="toolbar"><button class="btn pri" id="sSave">Simpan terperinci (CSV)</button><button class="btn" id="sPrint">Cetak</button></div>';
     h+='<div class="chips">'+years.map(v=>`<button class="chip ${v===y?'on':''}" data-sy="${v}">Tahun ${v}</button>`).join('')+'</div>';
     const cs=CLASSES.filter(c=>c.year===y&&c.students.length);
-    const titles=[]; cs.forEach(c=>c.books.forEach(b=>{ if(!titles.includes(b)) titles.push(b); }));
+    const titles=[]; cs.forEach(c=>c.books.forEach(b=>{ if(!hid(c,b)&&!titles.includes(b)) titles.push(b); }));
     h+='<div class="tw" style="max-height:none"><table class="sum"><thead><tr><th>Subjek / buku</th>'+cs.map(c=>`<th style="text-align:center">${c.label}<div style="font-weight:400;font-size:12px;color:var(--mut)">${stats(c).n}/${c.students.length} murid</div></th>`).join('')+'<th style="text-align:center">Jumlah</th></tr></thead><tbody>';
     const colTot=cs.map(()=>0); let grand=0;
     for(const tt of titles){
